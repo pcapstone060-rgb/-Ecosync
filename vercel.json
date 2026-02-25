@@ -1,33 +1,10 @@
 {
     "version": 2,
-    "builds": [
+    "name": "ecosync-frontend",
+    "rewrites": [
         {
-            "src": "backend/start.py",
-            "use": "@vercel/python",
-            "config": {
-                "maxDuration": "60s"
-            }
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
-    ],
-    "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "/backend/start.py"
-        },
-        {
-            "src": "/ws/(.*)",
-            "dest": "/backend/start.py"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/frontend/index.html"
-        }
-    ],
-    "env": {
-        "DATABASE_URL": "@database-url",
-        "EMAIL_USER": "@email-user",
-        "EMAIL_PASS": "@email-pass",
-        "SECRET_KEY": "@secret-key",
-        "ENVIRONMENT": "production"
-    }
+    ]
 }

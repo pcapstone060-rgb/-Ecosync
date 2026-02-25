@@ -18,6 +18,9 @@ else:
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./iot_system.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 print(f"--- DATABASE INITIALIZATION ---")
 print(f"URL: {DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else DATABASE_URL}")
 

@@ -1,4 +1,9 @@
 import os
+from typing import List, Dict
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
 from datetime import datetime
 
 # Shared Alert Logger (same as main.py)
@@ -10,67 +15,49 @@ def log_ml_activity(message: str):
             f.write(f"[{ts}] [ML] {message}\n")
     except: pass
 
-import numpy as np
-from filterpy.kalman import KalmanFilter
-from sklearn.ensemble import IsolationForest
-import pickle
-import os
+import math
 
 class AdaptiveKalmanFilter:
     """
-    Improved Kalman Filter that adapts Q (Process Noise) based on 
-    signal stability to track trends better while smoothing noise.
+    Lightweight 1D Kalman Filter (Scalar) to replace filterpy.
+    Reduces dependency size for Vercel.
     """
     def __init__(self, initial_value=0.0):
-        self.kf = KalmanFilter(dim_x=2, dim_z=1) # State: [value, velocity]
-        self.kf.x = np.array([[initial_value], [0.]])
-        self.kf.F = np.array([[1., 1.], [0., 1.]]) # State transition (Constant Velocity model)
-        self.kf.H = np.array([[1., 0.]]) # Measurement function
-        self.kf.P *= 10. 
-        self.kf.R = 5.0 # High measurement noise (smoothing)
-        self.kf.Q = np.array([[0.01, 0.01], [0.01, 0.01]]) # Low process noise initially
+        self.x = initial_value  # State estimate
+        self.p = 1.0           # Estimate error covariance
+        self.q = 0.01          # Process noise covariance
+        self.r = 5.0           # Measurement noise covariance (smoothing)
 
     def update(self, measurement):
-        self.kf.predict()
+        # Predict
+        self.p = self.p + self.q
         
-        # Adaptive Logic: If residual is high, increase Process Noise (Q) to track faster
-        residual = abs(measurement - self.kf.x[0, 0])
-        if residual > 2.0:
-            self.kf.Q[0, 0] = 1.0 # Trust measurement more (fast dynamic)
-        else:
-            self.kf.Q[0, 0] = 0.01 # Trust model more (smooth steady state)
-
-        self.kf.update(measurement)
-        return float(self.kf.x[0, 0])
+        # Adaptive Logic: If residual is high, increase Q to track faster
+        residual = abs(measurement - self.x)
+        current_q = 1.0 if residual > 2.0 else 0.01
+        
+        # Update
+        k = (self.p) / (self.p + self.r) # Kalman Gain
+        self.x = self.x + k * (measurement - self.x)
+        self.p = (1 - k) * self.p
+        
+        return float(self.x)
 
     def predict_future(self, steps=10):
-        """
-        Predict future values without updating the state.
-        Returns a list of predicted float values.
-        """
-        predictions = []
-        # Save current state
-        current_x = self.kf.x.copy()
-        current_P = self.kf.P.copy()
-        
-        for _ in range(steps):
-            self.kf.predict()
-            predictions.append(float(self.kf.x[0, 0]))
-            
-        # Restore state
-        self.kf.x = current_x
-        self.kf.P = current_P
-        return predictions
+        """Simple persistence prediction for lightweight version"""
+        return [float(self.x)] * steps
 
 class Preprocessor:
     def __init__(self):
         # [temp, pressure, vibration, wind, uv, soil_temp, soil_moist, pm25, pm10, no2, solar]
-        self.min_vals = np.array([-10.0, 900.0, 0.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        self.max_vals = np.array([100.0, 1100.0, 20.0, 150.0, 15.0, 60.0, 1.0, 500.0, 500.0, 200.0, 1500.0])
+        self.min_vals = [-10.0, 900.0, 0.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.max_vals = [100.0, 1100.0, 20.0, 150.0, 15.0, 60.0, 1.0, 500.0, 500.0, 200.0, 1500.0]
 
     def scale(self, features):
-        features = np.array(features)
-        scaled = (features - self.min_vals) / (self.max_vals - self.min_vals)
+        scaled = []
+        for i in range(len(features)):
+            s = (features[i] - self.min_vals[i]) / (self.max_vals[i] - self.min_vals[i])
+            scaled.append(s)
         return scaled
 
 class TrustScoreCalculator:
@@ -92,10 +79,10 @@ class TrustScoreCalculator:
         if reading.get('pm2_5', 0) < 0: score -= 20
         
         # 2. Stability Check (Simulated for single reading)
-        # In a real system, we'd check standard deviation over time
         if len(self.history) > 5:
-            last_avg = np.mean([x['temperature'] for x in self.history[-5:]])
-            if abs(reading.get('temperature', 0) - last_avg) > 10: 
+            temps = [x['temperature'] for x in self.history[-5:]]
+            avg = sum(temps) / len(temps)
+            if abs(reading.get('temperature', 0) - avg) > 10: 
                 score -= 15 # Sudden spike penalty
 
         self.history.append(reading)
@@ -167,8 +154,12 @@ class SensorHealthMonitor:
             readings = [x.get(sensor, 0) for x in history[-10:]]
             if len(set(readings)) == 1:
                 health[sensor] = "Stuck/Frozen"
-            elif np.std(readings) > 20: # Arbitrary high noise threshold
-                health[sensor] = "Unstable/Noisy"
+            else:
+                avg = sum(readings) / len(readings)
+                variance = sum((x - avg) ** 2 for x in readings) / len(readings)
+                std_dev = math.sqrt(variance)
+                if std_dev > 20: 
+                    health[sensor] = "Unstable/Noisy"
                 
         return health
 
@@ -181,6 +172,7 @@ class SmartInsightGenerator:
         self.risk_calc = RiskLevelCalculator()
         self.predictor = PredictionEngine()
         self.health_mon = SensorHealthMonitor()
+        self.if_detector = IsolationForestAnomalyDetector()
         self.history_buffer = []
 
     def generate_full_report(self, reading: dict, anomalies: list):
@@ -197,6 +189,12 @@ class SmartInsightGenerator:
             log_ml_activity("Health check done")
             prediction = self.predictor.predict_next_10_mins(self.history_buffer)
             log_ml_activity("Prediction done")
+
+            # Deep Anomaly Detection (Isolation Forest)
+            if_label, if_score = self.if_detector.predict(reading)
+            if if_label == "ANOMALY":
+                 log_ml_activity(f"Isolation Forest DETECTED ANOMALY (Score: {if_score:.4f})")
+                 anomalies.append(f"Pattern Anomaly (Confidence: {abs(if_score):.2f})")
             
             # Generate Text Insight
             insight_text = self._generate_text(reading, anomalies, risk)
@@ -272,11 +270,117 @@ class SmartInsightGenerator:
     def generate_insight(self, reading: dict, anomalies: list):
         return self._generate_text(reading, anomalies, "SAFE")
 
+class IsolationForestAnomalyDetector:
+    """
+    Advanced multi-sensor anomaly detection using Isolation Forest.
+    Learns patterns across Temperature, Humidity, Gas, and PM2.5.
+    """
+    def __init__(self, contamination=0.05, n_estimators=100, random_state=42):
+        self.model = IsolationForest(
+            contamination=contamination,
+            n_estimators=n_estimators,
+            random_state=random_state
+        )
+        self.scaler = StandardScaler()
+        self.is_trained = False
+        self.features = ['temperature', 'humidity', 'gas', 'pm2_5']
+
+    def _extract_features(self, data: Dict) -> np.ndarray:
+        """Extracts and orders features for model input."""
+        # Map pm25 to pm2_5 for consistency with DB models if needed
+        pm25_val = data.get('pm25') or data.get('pm2_5') or 0.0
+        row = [
+            data.get('temperature', 0.0),
+            data.get('humidity', 0.0),
+            data.get('gas', 0.0),
+            pm25_val
+        ]
+        return np.array(row).reshape(1, -1)
+
+    def train(self, historical_data: List[Dict]):
+        """Trains the model on a list of historical sensor packets."""
+        if not historical_data:
+            log_ml_activity("Training failed: No historical data provided.")
+            return
+
+        try:
+            X = []
+            for entry in historical_data:
+                # Handle pm2_5/pm25 key discrepancy
+                pm25 = entry.get('pm2_5') if entry.get('pm2_5') is not None else entry.get('pm25', 0.0)
+                X.append([
+                    entry.get('temperature', 0.0),
+                    entry.get('humidity', 0.0),
+                    entry.get('gas', 0.0),
+                    pm25
+                ])
+            
+            X_array = np.array(X)
+            # Scaling is important for Isolation Forest distance-based logic
+            X_scaled = self.scaler.fit_transform(X_array)
+            self.model.fit(X_scaled)
+            self.is_trained = True
+            log_ml_activity(f"Isolation Forest trained successfully on {len(X)} samples.")
+        except Exception as e:
+            log_ml_activity(f"Training error: {e}")
+            self.is_trained = False
+
+    def predict(self, sensor_data: Dict):
+        """
+        Returns anomaly label and score.
+        1 = Normal, -1 = Anomaly
+        """
+        if not self.is_trained:
+            return "NORMAL", 0.0  # Graceful fallback
+
+        try:
+            X = self._extract_features(sensor_data)
+            X_scaled = self.scaler.transform(X)
+            
+            prediction = self.model.predict(X_scaled)[0]
+            # anomaly_score: higher is more normal, lower is more anomalous
+            # scikit-learn's decision_function returns signed distance to hyperplane
+            score = self.model.decision_function(X_scaled)[0]
+            
+            label = "ANOMALY" if prediction == -1 else "NORMAL"
+            return label, float(score)
+        except Exception as e:
+            log_ml_activity(f"Prediction error: {e}")
+            return "NORMAL", 0.0
+
+def load_historical_data(limit: int = 1000) -> List[Dict]:
+    """
+    Helper function to load historical sensor data from PostgreSQL/SQLite 
+    via SQLAlchemy for model training.
+    """
+    from .database import SessionLocal
+    from .models import SensorData
+    
+    db = SessionLocal()
+    try:
+        # Fetch records with essential features, excluding nulls if possible
+        records = db.query(SensorData).filter(
+            SensorData.temperature.isnot(None),
+            SensorData.humidity.isnot(None)
+        ).order_by(SensorData.timestamp.desc()).limit(limit).all()
+        
+        return [
+            {
+                "temperature": r.temperature,
+                "humidity": r.humidity,
+                "gas": r.gas,
+                "pm2_5": r.pm2_5
+            } for r in records
+        ]
+    except Exception as e:
+        log_ml_activity(f"DB Load error: {e}")
+        return []
+    finally:
+        db.close()
+
 class IoTAnomalyDetector:
     def __init__(self):
         self.buffer = []
-        self.model = IsolationForest(n_estimators=100, contamination=0.1)
-        self.is_fitted = False
         self.preprocessor = Preprocessor()
         
         self.config = {
@@ -352,17 +456,19 @@ class IoTAnomalyDetector:
         scaled_features = self.preprocessor.scale(feature_vector)
         self.buffer.append(scaled_features)
         
-        if len(self.buffer) > 1000:
+        if len(self.buffer) > 20: # Use rolling window for simple anomaly detection
             self.buffer.pop(0)
         
-        if len(self.buffer) >= 50 and not self.is_fitted:
-            self.model.fit(self.buffer)
-            self.is_fitted = True
+        if len(self.buffer) >= 10:
+            # Simple Z-score like anomaly detection for PM2.5 (feature index 7)
+            pm25_readings = [v[7] for v in self.buffer]
+            avg = sum(pm25_readings) / len(pm25_readings)
+            variance = sum((x - avg) ** 2 for x in pm25_readings) / len(pm25_readings)
+            std_dev = math.sqrt(variance) if variance > 0 else 1.0
             
-        if self.is_fitted:
-            prediction = self.model.predict([scaled_features])[0]
-            score = self.model.decision_function([scaled_features])[0]
-            return bool(prediction == -1), float(score) # True if anomaly
+            current_pm25 = scaled_features[7]
+            if abs(current_pm25 - avg) > 3 * std_dev:
+                return True, -1.0 # Anomaly detected
         
         return False, 0.0
 
@@ -370,3 +476,4 @@ class IoTAnomalyDetector:
 anomaly_detector = IoTAnomalyDetector()
 trust_calculator = TrustScoreCalculator()
 insight_generator = SmartInsightGenerator()
+if_detector = IsolationForestAnomalyDetector()
