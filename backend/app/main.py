@@ -700,6 +700,7 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
         )
         
         smart_insight = smart_report["insight"]
+        anomaly_score = smart_report.get("if_score", 0.0)
         trust_score = trust_calculator.calculate_score({
             "temperature": data.temperature,
             "humidity": data.humidity,
@@ -726,6 +727,7 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                 ph=float(data.ph),
                 trust_score=float(trust_score),
                 anomaly_label=",".join(anomalies_list) if anomalies_list else "Normal",
+                anomaly_score=float(anomaly_score),
                 smart_insight=smart_insight
             )
             
@@ -1005,6 +1007,7 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
         "smart_metrics": {
             "trust_score": reading.trust_score,
             "anomaly_label": reading.anomaly_label,
+            "anomaly_score": reading.anomaly_score,
             "insight": reading.smart_insight,
             "ph": reading.ph,
             "risk_level": "CRITICAL" if len(user_breaches) > 0 else "SAFE",

@@ -205,7 +205,9 @@ class SmartInsightGenerator:
                 "risk_level": risk,
                 "sensor_health": health,
                 "prediction": prediction,
-                "baseline": self._get_mock_baseline(reading)
+                "baseline": self._get_mock_baseline(reading),
+                "if_label": if_label,
+                "if_score": if_score
             }
         except Exception as e:
             log_ml_activity(f"❌ ML ENGINE ERROR: {e}")

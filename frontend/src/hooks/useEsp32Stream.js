@@ -170,6 +170,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                     smart_metrics: {
                                         insight: smart.insight || smart.smart_insight, // Handle inconsistent naming
                                         anomaly_label: smart.anomaly_label,
+                                        anomaly_score: smart.anomaly_score,
                                         trust_score: smart.trust_score,
                                         risk_level: latest.risk_level || "SAFE",
                                         prediction: latest.prediction,
@@ -483,6 +484,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                 packet.smart_metrics = {
                                     insight: smartData.smart_insight,
                                     anomaly_label: smartData.anomaly_label,
+                                    anomaly_score: smartData.anomaly_score,
                                     // ph: smartData.ph,
                                     trust_score: smartData.trust_score ?? 99.9,
                                     // Phase 2 Metrics

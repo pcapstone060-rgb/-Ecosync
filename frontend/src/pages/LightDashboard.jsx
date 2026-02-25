@@ -278,8 +278,35 @@ const LightDashboard = ({ onToggle, initialView = 'overview' }) => {
                 <StatCard title="Motion" value={motion} unit="" icon={Zap} color="amber" />
                 <StatCard title="Rain Sensor" value={rainStatus} unit="" icon={CloudRain} color="blue" />
                 <StatCard title="Trust Score" value={trustScore} unit="%" icon={ShieldCheck} color={trustScore > 80 ? 'emerald' : 'yellow'} />
-                {/* <StatCard title="pH Level" value={ph} unit="pH" icon={FlaskConical} color="purple" /> */}
-                {/* <StatCard title="Pressure" value={latestData?.pressure || 1013} unit="hPa" icon={Gauge} color="cyan" /> */}
+
+                {/* AI Anomaly Detection Card */}
+                <div className={`relative p-5 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col justify-between overflow-hidden group hover:border-indigo-500/50 transition-all`}>
+                    <div className={`absolute top-2 right-2 p-2 opacity-20 text-indigo-400`}>
+                        <Brain size={48} strokeWidth={1.5} />
+                    </div>
+                    <div className="z-10">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-1 h-3 rounded-full bg-indigo-500"></div>
+                            <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">AI Anomaly Detection</p>
+                        </div>
+                        <h3 className={`text-2xl font-black font-mono tracking-tighter mt-1 mb-1 ${anomaly ? 'text-red-400' : 'text-emerald-400'}`}>
+                            {anomaly ? 'ANOMALY' : 'NORMAL'} {anomaly ? '🔴' : '🟢'}
+                        </h3>
+                        <div className="space-y-1 mt-2">
+                            <div className="flex justify-between text-[10px] font-bold">
+                                <span className="text-slate-500">SCORE:</span>
+                                <span className="text-indigo-300">{(smartMetrics.anomaly_score || 0).toFixed(4)}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-bold">
+                                <span className="text-slate-500">MODEL:</span>
+                                <span className="text-indigo-300">ISO FOREST</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 text-[10px] text-slate-600 uppercase tracking-wider w-full">
+                        {anomaly ? 'CHECK ENVIRONMENT' : 'CONTINUOUS MONITORING'}
+                    </div>
+                </div>
             </div>
 
             {/* Safety & Trends Grid */}
@@ -460,27 +487,47 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-const KalmanChart = ({ sensorData, title, rawKey, filteredKey, color, icon: Icon }) => (
-    <div className="glass-panel p-6 border-t-2 border-t-emerald-500/20 flex flex-col bg-slate-900/40 h-80 relative overflow-hidden group">
-        <div className={`absolute top-0 right-0 p-8 bg-${color}-500/5 rounded-full -mr-4 -mt-4 blur-3xl`} />
-        <h3 className="text-slate-200 text-sm font-bold flex items-center gap-2 uppercase tracking-widest mb-4 relative z-10">
-            <Icon size={16} className={`text-${color}-400`} /> {title} Analysis
-        </h3>
-        <div className="flex-1 min-h-0 relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={sensorData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#064e3b" vertical={false} opacity={0.5} />
-                    <XAxis dataKey="timestamp" hide />
-                    <YAxis stroke="#34d399" fontSize={10} tick={false} axisLine={false} domain={['auto', 'auto']} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Line type="monotone" dataKey={rawKey} stroke="#94a3b8" strokeOpacity={0.4} name={`Raw (Noisy)`} dot={false} strokeWidth={1} />
-                    <Line type="monotone" dataKey={filteredKey} stroke={color === 'amber' ? '#fbbf24' : color === 'blue' ? '#3b82f6' : '#10b981'} strokeWidth={3} name={`Filtered`} dot={false} />
-                </LineChart>
-            </ResponsiveContainer>
+const KalmanChart = ({ sensorData, title, rawKey, filteredKey, color, icon: Icon }) => {
+    // Custom Dot to show AI Anomalies
+    const AnomalyDot = (props) => {
+        const { cx, cy, payload } = props;
+        const isAnomaly = payload.smart_metrics?.anomaly_label && payload.smart_metrics.anomaly_label !== "Normal";
+
+        if (isAnomaly) {
+            return (
+                <circle cx={cx} cy={cy} r={5} fill="#ef4444" stroke="white" strokeWidth={2} />
+            );
+        }
+        return null;
+    };
+
+    return (
+        <div className="glass-panel p-6 border-t-2 border-t-emerald-500/20 flex flex-col bg-slate-900/40 h-80 relative overflow-hidden group">
+            <div className={`absolute top-0 right-0 p-8 bg-${color}-500/5 rounded-full -mr-4 -mt-4 blur-3xl`} />
+            <div className="flex justify-between items-center mb-4 relative z-10">
+                <h3 className="text-slate-200 text-sm font-bold flex items-center gap-2 uppercase tracking-widest">
+                    <Icon size={16} className={`text-${color}-400`} /> {title} Analysis
+                </h3>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div> AI ANOMALY
+                </div>
+            </div>
+            <div className="flex-1 min-h-0 relative z-10">
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={sensorData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#064e3b" vertical={false} opacity={0.5} />
+                        <XAxis dataKey="timestamp" hide />
+                        <YAxis stroke="#34d399" fontSize={10} tick={false} axisLine={false} domain={['auto', 'auto']} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                        <Line type="monotone" dataKey={rawKey} stroke="#94a3b8" strokeOpacity={0.4} name={`Raw (Noisy)`} dot={false} strokeWidth={1} />
+                        <Line type="monotone" dataKey={filteredKey} stroke={color === 'amber' ? '#fbbf24' : color === 'blue' ? '#3b82f6' : '#10b981'} strokeWidth={3} name={`Filtered`} dot={<AnomalyDot />} />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const SetupDeviceModal = ({ isOpen, onClose, onPair, connectionStatus }) => {
     const [step, setStep] = useState(1);

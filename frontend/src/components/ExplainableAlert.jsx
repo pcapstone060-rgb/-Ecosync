@@ -62,21 +62,22 @@ const ExplainableAlert = ({ currentData, baselineData, alertReason, userEmail })
     const isGasAlert = gasDev > 50;
     const isHumAlert = Math.abs(humDev) > 20;
     const isRainAlert = isRaining;
-    const isAlert = isTempAlert || isGasAlert || isHumAlert || isRainAlert || alertReason;
+    const isAlert = isTempAlert || isGasAlert || isHumAlert || isRainAlert || (alertReason && alertReason !== "Normal");
 
     const getMainCause = () => {
+        const reason = alertReason || "";
         if (isTempAlert && isGasAlert) return "Compound Risk: Thermal + Chemical Spike";
         if (isTempAlert) return "Thermal Anomaly Detected";
         if (isGasAlert) return "Chemical Vapor Leakage";
         if (isHumAlert) return "Humidity Out of Safe Range";
         if (isRainAlert) return "Active Precipitation Detected";
-        return alertReason || "Anomaly Pattern Match";
+        if (reason.includes("Pattern Anomaly") || (alertReason && alertReason !== "Normal")) return "Anomaly Pattern Match";
+        return "System Stable";
     };
 
     // Dynamic precautions with historical context
     const precautions = [];
     const lw = histCtx?.last_week;
-    const yd = histCtx?.yesterday;
 
     if (isTempAlert) {
         const lwNote = lw?.temperature != null
@@ -107,180 +108,120 @@ const ExplainableAlert = ({ currentData, baselineData, alertReason, userEmail })
         : [];
 
     return (
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 backdrop-blur-sm relative overflow-hidden space-y-5">
-
-            {/* Header */}
-            <div className="flex items-center gap-3 relative z-10">
-                <div className={`p-2 rounded-lg ${isAlert ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-400'}`}>
-                    <Brain size={24} />
-                </div>
-                <div>
-                    <h3 className="text-white font-bold flex items-center gap-2">
-                        Explainable AI Insight
-                        {isAlert && <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded animate-pulse">ACTION REQUIRED</span>}
-                    </h3>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Real-time + Historical Analysis</p>
-                </div>
-            </div>
-
-            {/* Sensor Grid 2x2 */}
-            <div className="grid grid-cols-2 gap-3 relative z-10">
-                {/* Temperature */}
-                <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs text-slate-500 font-bold uppercase">Temperature</span>
-                        <Thermometer size={14} className={isTempAlert ? "text-red-400" : "text-emerald-400"} />
+        <div className="bg-transparent space-y-6">
+            {/* Cause + Severity Bar (The specific piece from the image) */}
+            <div className={`bg-[#0f172a]/80 backdrop-blur-xl rounded-xl px-6 py-4 border flex flex-row justify-between items-center shadow-2xl relative z-10 transition-all duration-500 ${isAlert ? 'border-red-500/30' : 'border-indigo-500/20'}`}>
+                <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-lg ${isAlert ? 'bg-red-500/10' : 'bg-indigo-500/10'}`}>
+                        <AlertTriangle size={20} className={isAlert ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.5)]'} />
                     </div>
-                    <span className="text-2xl font-mono font-black text-white">{temp?.toFixed(1) ?? '--'}°C</span>
-                    <div className="text-xs mt-1 space-y-0.5">
-                        <span className={`block font-bold ${isTempAlert ? 'text-red-400' : 'text-emerald-400'}`}>
-                            {tempDev > 0 ? '+' : ''}{tempDev.toFixed(1)}° from baseline
-                        </span>
-                        <Trend current={temp} historical={lw?.temperature} unit="°C" />
-                    </div>
-                </div>
-
-                {/* Gas */}
-                <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs text-slate-500 font-bold uppercase">Gas Level</span>
-                        <Wind size={14} className={isGasAlert ? "text-red-400" : "text-emerald-400"} />
-                    </div>
-                    <span className="text-2xl font-mono font-black text-white">{gas?.toFixed(0) ?? '--'}</span>
-                    <span className="text-xs text-slate-500 ml-1">PPM</span>
-                    <div className="text-xs mt-1 space-y-0.5">
-                        <span className={`block font-bold ${isGasAlert ? 'text-red-400' : 'text-emerald-400'}`}>
-                            {gasDev > 0 ? '+' : ''}{gasDev.toFixed(0)} from baseline
-                        </span>
-                        <Trend current={gas} historical={lw?.gas} unit=" ppm" />
-                    </div>
-                </div>
-
-                {/* Humidity */}
-                <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs text-slate-500 font-bold uppercase">Humidity</span>
-                        <Droplets size={14} className={isHumAlert ? "text-orange-400" : "text-emerald-400"} />
-                    </div>
-                    <span className="text-2xl font-mono font-black text-white">{hum?.toFixed(1) ?? '--'}%</span>
-                    <div className="text-xs mt-1 space-y-0.5">
-                        <span className={`block font-bold ${isHumAlert ? 'text-orange-400' : 'text-emerald-400'}`}>
-                            {humDev > 0 ? '+' : ''}{humDev.toFixed(1)}% from baseline
-                        </span>
-                        <Trend current={hum} historical={lw?.humidity} unit="%" />
-                    </div>
-                </div>
-
-                {/* Rain */}
-                <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="text-xs text-slate-500 font-bold uppercase">Rain Sensor</span>
-                        <CloudRain size={14} className={isRaining ? "text-blue-400" : isDamp ? "text-cyan-400" : "text-emerald-400"} />
-                    </div>
-                    <span className={`text-xl font-mono font-black ${isRaining ? 'text-blue-400' : isDamp ? 'text-cyan-400' : 'text-emerald-400'}`}>
-                        {rainStatus ?? '---'}
-                    </span>
-                    <div className="text-xs mt-1 text-slate-500">
-                        {rainRaw != null ? `ADC: ${rainRaw}` : 'No data'}
-                    </div>
-                </div>
-            </div>
-
-            {/* Cause + Severity */}
-            <div className="bg-slate-800/30 rounded-lg p-4 border border-indigo-500/20 flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
-                <div className="flex items-center gap-3 w-full">
-                    <AlertTriangle size={20} className="text-indigo-400 shrink-0" />
                     <div>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block mb-0.5">ESTIMATED CAUSE</span>
-                        <span className="text-white font-bold">{getMainCause()}</span>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black block leading-none mb-1">ESTIMATED CAUSE</span>
+                        <span className="text-white font-bold text-lg tracking-tight leading-none uppercase">{getMainCause()}</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-4 w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-700 pt-3 md:pt-0 md:pl-4">
-                    <div>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block mb-0.5">SEVERITY</span>
-                        <span className={`font-black text-lg ${isAlert ? 'text-red-400' : 'text-emerald-400'}`}>
+
+                <div className="flex items-center gap-6">
+                    <div className="w-[1px] h-10 bg-slate-800"></div>
+                    <div className="text-right">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black block leading-none mb-1">SEVERITY</span>
+                        <span className={`font-black text-xl leading-none tracking-tighter ${isAlert ? 'text-red-500' : 'text-emerald-500'}`}>
                             {isAlert ? 'HIGH' : 'LOW'}
                         </span>
                     </div>
                 </div>
             </div>
 
-            {/* Historical AI Context */}
-            <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-3">
-                    <History size={16} className="text-indigo-400" />
-                    <span className="text-xs text-indigo-400 uppercase tracking-widest font-bold">AI Historical Context</span>
-                    {histLoading && <span className="text-[10px] text-slate-500 animate-pulse">Analyzing...</span>}
+            {/* AI Context & Precautions Container */}
+            <div className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-6 backdrop-blur-md relative overflow-hidden">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-500/10 rounded-lg">
+                            <Brain size={20} className="text-indigo-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-white font-bold text-sm tracking-wide">Explainable AI Insights</h3>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Real-time + Historical Analysis</p>
+                        </div>
+                    </div>
+                    {isAlert && <span className="text-[9px] font-black bg-red-500/20 text-red-500 border border-red-500/30 px-2 py-1 rounded tracking-tighter animate-pulse">ACTION REQUIRED</span>}
                 </div>
 
-                {narrativeSegments.length > 0 ? (
-                    <div className="space-y-2">
-                        {narrativeSegments.map((seg, i) => (
-                            <div key={i} className="bg-indigo-950/30 border border-indigo-500/20 rounded-lg px-4 py-3">
-                                <p className="text-slate-300 text-xs leading-relaxed">{seg}</p>
+                {/* Sensor Grid Internal */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    {[
+                        { label: 'Temp', val: temp, dev: tempDev, icon: Thermometer, unit: '°C', alert: isTempAlert, hist: lw?.temperature },
+                        { label: 'Gas', val: gas, dev: gasDev, icon: Wind, unit: 'ppm', alert: isGasAlert, hist: lw?.gas },
+                        { label: 'Humidity', val: hum, dev: humDev, icon: Droplets, unit: '%', alert: isHumAlert, hist: lw?.humidity },
+                        { label: 'Rain', val: rainStatus, ADC: rainRaw, icon: CloudRain, unit: '', alert: isRaining, isStatus: true }
+                    ].map((s, i) => (
+                        <div key={i} className="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50 group hover:border-indigo-500/30 transition-all">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{s.label}</span>
+                                <s.icon size={12} className={s.alert ? 'text-red-400' : 'text-slate-500'} />
                             </div>
-                        ))}
-
-                        {/* 7-day averages comparison */}
-                        {histCtx?.week_averages && (
-                            <div className="bg-slate-800/40 rounded-lg p-3 border border-slate-700/50 mt-2">
-                                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block mb-2">7-Day Averages vs Now</span>
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    {[
-                                        { label: 'Temp', avg: histCtx.week_averages.temperature, current: temp, unit: '°C' },
-                                        { label: 'Humidity', avg: histCtx.week_averages.humidity, current: hum, unit: '%' },
-                                        { label: 'Gas', avg: histCtx.week_averages.gas, current: gas, unit: 'ppm' },
-                                    ].map(({ label, avg, current, unit }) => {
-                                        const diff = avg != null && current != null ? current - avg : null;
-                                        const color = diff == null ? 'text-slate-500' : Math.abs(diff) < 1 ? 'text-emerald-400' : diff > 0 ? 'text-red-400' : 'text-emerald-400';
-                                        return (
-                                            <div key={label} className="bg-slate-900/50 rounded p-2">
-                                                <span className="text-[10px] text-slate-500 uppercase block">{label}</span>
-                                                <span className="text-white font-mono font-bold text-sm">{avg ?? '—'}{unit}</span>
-                                                {diff != null && (
-                                                    <span className={`text-[10px] font-bold block ${color}`}>
-                                                        {diff > 0 ? '+' : ''}{diff.toFixed(1)} now
-                                                    </span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-lg font-mono font-black text-white">{s.isStatus ? (s.val || '---') : (s.val?.toFixed(1) || '---')}</span>
+                                {!s.isStatus && <span className="text-[10px] text-slate-600 font-bold">{s.unit}</span>}
+                            </div>
+                            {!s.isStatus && (
+                                <div className="mt-1">
+                                    <span className={`text-[9px] font-bold ${s.alert ? 'text-red-400' : 'text-emerald-500'}`}>
+                                        {s.dev > 0 ? '+' : ''}{s.dev.toFixed(1)}{s.unit} from norm
+                                    </span>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Narrative & History */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <History size={14} className="text-indigo-400" />
+                        <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-black">AI Observational Narrative</span>
                     </div>
-                ) : (
-                    <div className="bg-slate-800/30 rounded-lg px-4 py-3 border border-slate-700/30">
-                        <p className="text-slate-500 text-xs">
-                            {histLoading ? 'Loading historical data...' : 'No historical data available yet. Data will appear after 24 hours of monitoring.'}
-                        </p>
+
+                    {narrativeSegments.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2">
+                            {narrativeSegments.map((seg, i) => (
+                                <div key={i} className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl px-4 py-3">
+                                    <p className="text-slate-300 text-[11px] leading-relaxed italic">"{seg}"</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-slate-950/20 rounded-xl px-4 py-3 border border-slate-800/50">
+                            <p className="text-slate-600 text-[10px]">Learning environmental patterns... Historical narrative will appear after more data collection.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Precautions */}
+                {precautions.length > 0 && (
+                    <div className="mt-8 pt-8 border-t border-slate-800/50">
+                        <div className="flex items-center gap-2 mb-4">
+                            <ShieldCheck size={14} className="text-emerald-400" />
+                            <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-black">AI Recommendations</span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            {precautions.map((p, i) => (
+                                <div key={i} className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-3 flex items-start gap-4 hover:bg-emerald-500/10 transition-colors">
+                                    <span className="text-xl">{p.icon}</span>
+                                    <div>
+                                        <span className="text-emerald-400 font-black text-[10px] uppercase tracking-wider block mb-1">{p.label}</span>
+                                        <p className="text-slate-300 text-xs leading-relaxed">{p.action}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
+
+                {/* Background Glows */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-[100px] rounded-full" />
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/5 blur-[100px] rounded-full" />
             </div>
-
-            {/* Precautions */}
-            {precautions.length > 0 && (
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3">
-                        <ShieldCheck size={16} className="text-emerald-400" />
-                        <span className="text-xs text-emerald-400 uppercase tracking-widest font-bold">Recommended Precautions</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                        {precautions.map((p, i) => (
-                            <div key={i} className="bg-emerald-950/30 border border-emerald-500/20 rounded-lg px-4 py-3 flex items-start gap-3">
-                                <span className="text-lg leading-none mt-0.5">{p.icon}</span>
-                                <div>
-                                    <span className="text-emerald-400 font-bold text-xs uppercase tracking-wide block mb-0.5">{p.label}</span>
-                                    <span className="text-slate-300 text-xs leading-relaxed">{p.action}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Background Decor */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full pointer-events-none" />
         </div>
     );
 };
