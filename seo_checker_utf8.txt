@@ -1,0 +1,34 @@
+﻿
+============================================================
+  SEO CHECKER - Search Engine Optimization Audit
+============================================================
+Project: C:\Users\sreek\OneDrive\Desktop\IOT_PROJECT\Ecosync
+Time: 2026-02-27 12:39:47
+------------------------------------------------------------
+Found 24 page files to analyze
+
+============================================================
+SEO ANALYSIS RESULTS
+============================================================
+
+Issue Summary:
+  [10] Missing meta description
+  [10] Missing Open Graph tags
+  [4] Missing <title> tag
+
+Affected files (10):
+  - live_index.html
+  - test_supabase.html
+  - all_figures.html
+  - single_figure.html
+  - DeviceList.jsx
+  ... and 5 more
+
+{
+  "script": "seo_checker",
+  "project": "C:\\Users\\sreek\\OneDrive\\Desktop\\IOT_PROJECT\\Ecosync",
+  "files_checked": 24,
+  "files_with_issues": 10,
+  "issues_found": 24,
+  "passed": false
+}

@@ -62,15 +62,15 @@ def build_normalized_response(lat, lon, city, weather_data, aq_data, sources):
     }
 
 # --- ML Performance API ---
+from ..ml_engine import calculate_isolation_forest_performance
+
 @router.get("/ml/performance", tags=["ML Performance"])
 def get_ml_performance():
-    return {
-      "model": "Isolation Forest",
-      "precision": 0.91,
-      "recall": 0.88,
-      "f1_score": 0.89,
-      "accuracy": 0.93
-    }
+    """
+    Calculates live Isolation Forest performance metrics
+    using historical data from Supabase.
+    """
+    return calculate_isolation_forest_performance()
 
 
 # --- DEPENDENCIES ---

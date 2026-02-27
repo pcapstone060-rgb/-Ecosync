@@ -1,0 +1,32 @@
+﻿
+[UX AUDIT] 65 files checked
+--------------------------------------------------
+[!] ISSUES (19):
+  - [Cognitive Load] boilerplate.css: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Cognitive Load] App.css: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Cognitive Load] AIModelPerformanceCard.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Color] AIModelPerformanceCard.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Cognitive Load] AIAnalysisCard.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Color] LiteView.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Color] ProView.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Cognitive Load] Common.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Cognitive Load] AuthContext.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Color] DashboardLayout.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+[*] WARNINGS (405):
+  - [Serial Position] all_figures.html: Last nav item may not be important. Place key actions at start/end.
+  - [Animation] ipython_inline_figure.html: Async operations without loading indicator. Add skeleton or spinner for perceived performance.
+  - [Serial Position] single_figure.html: Last nav item may not be important. Place key actions at start/end.
+  - [Von Restorff] boilerplate.css: No primary CTA
+  - [Reflective] boilerplate.css: Long-form content without brand story/values. Add 'About' or 'Why We Exist' section.
+  - [Typography] boilerplate.css: No line length constraint (45-75ch). Use max-w-prose or max-w-[65ch].
+  - [Typography] boilerplate.css: Fixed font sizes without clamp(). Consider fluid typography: clamp(MIN, PREFERRED, MAX)
+  - [Visual] boilerplate.css: Flat design with no depth. Consider shadows or subtle gradients for hierarchy.
+  - [Color] boilerplate.css: Pure black (#000000) detected. Use #1a1a1a or darker grays for better dark mode.
+  - [Von Restorff] mpl.css: No primary CTA
+  - [Fitts' Law] page.css: Small targets (< 44px)
+  - [Typography] page.css: Fixed font sizes without clamp(). Consider fluid typography: clamp(MIN, PREFERRED, MAX)
+  - [Typography] estimator.css: Fixed font sizes without clamp(). Consider fluid typography: clamp(MIN, PREFERRED, MAX)
+  - [Visual] estimator.css: Simple/Unnatural shadow detected. Consider multiple layers or Y > X offset for realism.
+  - [Visual] estimator.css: Many border declarations (11). Simplify for cleaner look.
+[+] PASSED CHECKS: 25
+STATUS: FAIL

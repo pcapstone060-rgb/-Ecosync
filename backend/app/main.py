@@ -93,6 +93,15 @@ async def startup_event():
         # asyncio.create_task(poll_devices()) 
         # asyncio.create_task(refresh_map_cache())
         
+        # 4. Train anomaly detection model
+        logger.info("Training Isolation Forest on historical data...")
+        from .ml_engine import load_historical_data, if_detector
+        historical_data = load_historical_data(limit=1000)
+        if historical_data:
+            if_detector.train(historical_data)
+        else:
+            logger.warning("No historical data found to train Isolation Forest.")
+
         logger.info("EcoSync Backend Initialized Successfully.")
         logger.info("Startup: Background tasks initiated (Polling Enabled)")
     except Exception as e:

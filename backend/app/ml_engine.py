@@ -584,3 +584,122 @@ def plot_roc_curve(y_true, scores, model_name="Isolation Forest"):
     plt.savefig(save_path)
     plt.close()
     return save_path
+
+# ====================================================
+# Dynamic AI Model Evaluation (Supabase Integration)
+# ====================================================
+
+def fetch_historical_data_from_supabase(limit=200):
+    """Fetches historical sensor data from Supabase cloud database."""
+    try:
+        from supabase import create_client, Client
+    except ImportError:
+        log_ml_activity("Supabase python client not installed.")
+        return []
+
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    
+    if not supabase_url or not supabase_key:
+        log_ml_activity("Supabase credentials not found in environment variables.")
+        return []
+        
+    try:
+        supabase: Client = create_client(supabase_url, supabase_key)
+        # Fetch latest records from sensor_data table (using pm2_5 instead of pm25 as per DB schema)
+        response = supabase.table("sensor_data").select("temperature,humidity,gas,pm2_5,timestamp").order('timestamp', desc=True).limit(limit).execute()
+        
+        log_ml_activity(f"Fetched {len(response.data)} records from Supabase.")
+        return response.data
+    except Exception as e:
+        log_ml_activity(f"Failed to fetch historical data from Supabase: {e}")
+        return []
+
+def generate_ground_truth(data):
+    """
+    Generate ground truth labels using safety thresholds:
+    Anomaly = 1 if:
+    - temperature > 50 OR gas > 2000 OR pm25 > 150
+    Otherwise:
+    Normal = 0
+    """
+    temp = float(data.get('temperature') or 0.0)
+    gas = float(data.get('gas') or 0.0)
+    pm25 = float(data.get('pm25') or data.get('pm2_5') or 0.0)
+    
+    if temp > 50 or gas > 2000 or pm25 > 150:
+        return 1
+    return 0
+
+def calculate_isolation_forest_performance():
+    """
+    Compute model performance metrics for Isolation Forest using historical sensor data from Supabase.
+    """
+    data = fetch_historical_data_from_supabase(limit=200)
+    
+    if not data:
+        log_ml_activity("No historical data available for performance calculation.")
+        return {
+            "model": "Isolation Forest",
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "accuracy": 0.0,
+            "total_samples": 0
+        }
+        
+    y_true = []
+    iso_pred_labels = []
+    
+    anomalies_detected = 0
+    
+    # Use the global if_detector instance
+    for row in data:
+        truth = generate_ground_truth(row)
+        y_true.append(truth)
+        
+        # Isolation Forest prediction
+        pred_label, _ = if_detector.predict(row)
+        
+        # Convert output for ModelEvaluationEngine: 1 (Normal), -1 (Anomaly)
+        iso_val = -1 if pred_label == "ANOMALY" else 1
+        iso_pred_labels.append(iso_val)
+        
+        if iso_val == -1:
+            anomalies_detected += 1
+            
+    log_ml_activity(f"Number of records fetched from Supabase: {len(data)}")
+    log_ml_activity(f"Number of anomalies detected: {anomalies_detected}")
+            
+    # Calculate metrics using ModelEvaluationEngine
+    # evaluate_anomaly_models handles converting (-1, 1) and true (0, 1) properly
+    try:
+        results = ModelEvaluationEngine.evaluate_anomaly_models(
+            y_true=y_true, 
+            iso_pred_labels=iso_pred_labels, 
+            zscore_pred_labels=[False]*len(data) # Dummy values for Z-Score
+        )
+        metrics = results["isolation_forest"]
+    except Exception as e:
+        log_ml_activity(f"Failed to evaluate metrics: {e}")
+        return {
+            "model": "Isolation Forest",
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "accuracy": 0.0,
+            "total_samples": len(data)
+        }
+    
+    cm = metrics.get("confusion_matrix", [])
+    log_ml_activity(f"Confusion Matrix values: {cm}")
+    
+    return {
+        "model": "Isolation Forest",
+        "precision": metrics.get("precision", 0.0),
+        "recall": metrics.get("recall", 0.0),
+        "f1_score": metrics.get("f1", 0.0),
+        "accuracy": metrics.get("accuracy", 0.0),
+        "total_samples": len(data),
+        "confusion_matrix": cm
+    }
