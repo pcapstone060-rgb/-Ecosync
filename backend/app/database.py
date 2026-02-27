@@ -25,24 +25,21 @@ print(f"--- DATABASE INITIALIZATION ---")
 print(f"URL: {DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else DATABASE_URL}")
 
 # Create engine
-connect_args = {}
 if "sqlite" in DATABASE_URL:
-    connect_args = {"check_same_thread": False, "timeout": 30}
-elif "postgresql" in DATABASE_URL:
-    # Supabase/PostgreSQL optimizations
-    connect_args = {
-        "sslmode": "require",
-        "connect_timeout": 10
-    }
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-    pool_size=10,
-    max_overflow=20,
-    pool_recycle=300,
-    echo=True
-)
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False, "timeout": 30},
+        echo=True
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"sslmode": "require", "connect_timeout": 10},
+        pool_size=10,
+        max_overflow=20,
+        pool_recycle=300,
+        echo=True
+    )
 
 # Create session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

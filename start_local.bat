@@ -25,17 +25,17 @@ cd backend
 
 REM Create a local .env file for development
 (
-echo DATABASE_URL=postgresql://postgres:7Ppc6dkM1Ob98LHZ@db.moulkspffuxigvwlflho.supabase.co:5432/postgres
+echo DATABASE_URL=sqlite:///./iot_system.db
 echo SECRET_KEY=local-dev-secret-key-change-in-production
 echo ALGORITHM=HS256
 echo ACCESS_TOKEN_EXPIRE_MINUTES=30
 echo EMAIL_USER=sreekar092004@gmail.com
 echo EMAIL_PASS=orzh vstq rnsp gpwi
 echo GEMINI_API_KEY=AIzaSyDcpyUQnn24R_jxjRveR0Mpvl8eofaK1iM
-) > .env.local
+) > .env
 
-echo [2/3] Starting Backend Server on port 8000...
-start "Ecosync Backend" cmd /k "venv\Scripts\activate && set DATABASE_URL=postgresql://postgres:7Ppc6dkM1Ob98LHZ@db.moulkspffuxigvwlflho.supabase.co:5432/postgres && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+echo [2/3] Starting Backend Server on port 8000 (SQLite Mode)...
+start "Ecosync Backend" cmd /k "venv\Scripts\activate && set PYTHONIOENCODING=utf-8 && set DATABASE_URL=sqlite:///./iot_system.db && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
 timeout /t 3 /nobreak > nul
 

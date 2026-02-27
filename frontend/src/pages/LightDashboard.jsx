@@ -19,6 +19,7 @@ import ContactSupport from './ContactSupport';
 
 import TrendGraph from '../components/TrendGraph';
 import SettingsDialog from '../components/dashboard/shared/SettingsDialog'; // [NEW]
+import AIModelPerformanceCard from '../components/AIModelPerformanceCard';
 
 const LightDashboard = ({ onToggle, initialView = 'overview' }) => {
     const navigate = useNavigate();
@@ -307,6 +308,9 @@ const LightDashboard = ({ onToggle, initialView = 'overview' }) => {
                         {anomaly ? 'CHECK ENVIRONMENT' : 'CONTINUOUS MONITORING'}
                     </div>
                 </div>
+
+                {/* AI Model Evaluation Metrics Card */}
+                <AIModelPerformanceCard />
             </div>
 
             {/* Safety & Trends Grid */}

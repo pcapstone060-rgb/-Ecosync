@@ -1,0 +1,27 @@
+Loading environment from: C:\Users\sreek\OneDrive\Desktop\IOT_PROJECT\Ecosync\backend\.env.local
+--- DATABASE INITIALIZATION ---
+URL: aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require
+====================================================
+   EcoSync AI: Model Evaluation & Comparison demo
+====================================================
+
+Running predictions on test set...
+
+[DONE] Evaluation Complete.
+
+--- MODEL COMPARISON TABLE ---
+Model                | Precision  | Recall     | F1 Score   | Accuracy  
+------------------------------------------------------------------------
+isolation_forest     | 0.6250     | 1.0000     | 0.7692     | 0.8800    
+zscore_detector      | 1.0000     | 0.1000     | 0.1818     | 0.8200    
+
+[DONE] ROC Curve saved to: roc_curve_latest.png
+
+--- PREDICTION ACCURACY (REGRESSION) ---
+Mean Absolute Error (MAE): 0.4200
+Root Mean Square Error (RMSE): 0.4879
+Mean Absolute Percentage Error (MAPE): 1.49%
+
+====================================================
+   End of Evaluation Report
+====================================================

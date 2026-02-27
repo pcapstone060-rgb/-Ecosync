@@ -2,6 +2,12 @@ import os
 from typing import List, Dict
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    precision_score, recall_score, f1_score, accuracy_score, 
+    roc_auc_score, confusion_matrix, mean_absolute_error, 
+    mean_squared_error, roc_curve, auc
+)
+import matplotlib.pyplot as plt
 import numpy as np
 
 from datetime import datetime
@@ -479,3 +485,102 @@ anomaly_detector = IoTAnomalyDetector()
 trust_calculator = TrustScoreCalculator()
 insight_generator = SmartInsightGenerator()
 if_detector = IsolationForestAnomalyDetector()
+
+class ModelEvaluationEngine:
+    """
+    Evaluates and compares anomaly detection and prediction models.
+    Provides metrics like F1-score, Precision, Recall, MAE, and RMSE.
+    """
+    
+    @staticmethod
+    def evaluate_anomaly_models(y_true, iso_pred_labels, zscore_pred_labels, iso_scores=None):
+        """
+        Calculates metrics for Anomaly Detection.
+        y_true: 0 (Normal), 1 (Anomaly)
+        iso_pred_labels: 1 (Normal), -1 (Anomaly) from sklearn
+        zscore_pred_labels: True/False or 0/1 from IoTAnomalyDetector
+        """
+        # 1. Convert Isolation Forest Labels: (-1 -> 1, 1 -> 0)
+        iso_binary = [1 if p == -1 else 0 for p in iso_pred_labels]
+        
+        # 2. Convert Z-Score Labels: (True/1 -> 1, False/0 -> 0)
+        zscore_binary = [1 if p in [True, 1, -1.0] else 0 for p in zscore_pred_labels]
+        
+        results = {
+            "isolation_forest": ModelEvaluationEngine._get_clf_metrics(y_true, iso_binary, iso_scores),
+            "zscore_detector": ModelEvaluationEngine._get_clf_metrics(y_true, zscore_binary)
+        }
+        return results
+
+    @staticmethod
+    def _get_clf_metrics(y_true, y_pred, scores=None):
+        metrics = {
+            "precision": float(precision_score(y_true, y_pred, zero_division=0)),
+            "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+            "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+            "accuracy": float(accuracy_score(y_true, y_pred))
+        }
+        if scores is not None:
+            # Note: Decision function scores for IF are 'higher = normal'. 
+            # roc_auc_score expects 'higher = anomaly' or probabilities.
+            # We invert the scores for AUC calculation.
+            try:
+                metrics["roc_auc"] = float(roc_auc_score(y_true, [-s for s in scores]))
+            except:
+                metrics["roc_auc"] = 0.0
+        
+        metrics["confusion_matrix"] = confusion_matrix(y_true, y_pred).tolist()
+        return metrics
+
+    @staticmethod
+    def evaluate_prediction(y_true_values, predicted_values):
+        """Calculates regression metrics for PredictionEngine."""
+        y_true = np.array(y_true_values)
+        y_pred = np.array(predicted_values)
+        
+        mae = mean_absolute_error(y_true, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+        
+        # MAPE (Mean Absolute Percentage Error) - Avoid division by zero
+        non_zero = y_true != 0
+        mape = np.mean(np.abs((y_true[non_zero] - y_pred[non_zero]) / y_true[non_zero])) * 100 if np.any(non_zero) else 0.0
+        
+        return {
+            "mae": float(mae),
+            "rmse": float(rmse),
+            "mape": float(mape)
+        }
+
+def compare_models(results_dict):
+    """Generates a formatted ASCII table for report printing."""
+    header = f"{'Model':<20} | {'Precision':<10} | {'Recall':<10} | {'F1 Score':<10} | {'Accuracy':<10}"
+    separator = "-" * len(header)
+    rows = [header, separator]
+    
+    for model_name, m in results_dict.items():
+        row = f"{model_name:<20} | {m['precision']:<10.4f} | {m['recall']:<10.4f} | {m['f1']:<10.4f} | {m['accuracy']:<10.4f}"
+        rows.append(row)
+    
+    return "\n".join(rows)
+
+def plot_roc_curve(y_true, scores, model_name="Isolation Forest"):
+    """Helper to plot and save ROC curve."""
+    # Invert scores for IF: higher should be more anomalous for ROC
+    fpr, tpr, _ = roc_curve(y_true, [-s for s in scores])
+    roc_auc = auc(fpr, tpr)
+    
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:0.2f})')
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(f'Receiver Operating Characteristic - {model_name}')
+    plt.legend(loc="lower right")
+    plt.grid(alpha=0.3)
+    
+    save_path = "roc_curve_latest.png"
+    plt.savefig(save_path)
+    plt.close()
+    return save_path

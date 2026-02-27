@@ -84,7 +84,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     t0 = dt.now()
     print(f">>> TRACE: Login attempt for {form_data.username} at {t0.isoformat()}")
     
-    # 1. Fetch User
+    print(f">>> TRACE: Starting user query for {form_data.username}")
     user = db.query(User).filter(User.email == form_data.username).first()
     t1 = dt.now()
     print(f">>> TRACE: User lookup took {(t1-t0).total_seconds()}s")
@@ -98,17 +98,17 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         )
 
     # 2. Verify Password
-    print(f">>> TRACE: Verifying password for {user.email}")
-    if not security.verify_password(form_data.password, user.hashed_password):
-        t2 = dt.now()
-        print(f">>> TRACE: Password verification FAILED after {(t2-t1).total_seconds()}s")
+    print(f">>> TRACE: Starting password verification for {user.email}")
+    is_valid = security.verify_password(form_data.password, user.hashed_password)
+    t2 = dt.now()
+    print(f">>> TRACE: Password verification success: {is_valid} in {(t2-t1).total_seconds()}s")
+    
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    t2 = dt.now()
-    print(f">>> TRACE: Password verification success in {(t2-t1).total_seconds()}s")
 
     # 3. Generate Token
     access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
