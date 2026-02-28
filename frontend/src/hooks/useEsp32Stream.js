@@ -455,7 +455,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
 
                         // --- BACKEND SYNC & SMART METRICS FETCH ---
                         try {
-                            const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"; // Fallback
+                            const API_URL = import.meta.env.VITE_API_BASE_URL !== undefined ? import.meta.env.VITE_API_BASE_URL : ""; // Fallback
                             // console.log("🚀 SERIAL PUSH: Sending to", API_URL);
                             // console.log("👤 User:", userEmail);
 

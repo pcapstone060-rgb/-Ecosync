@@ -1,11 +1,20 @@
 import requests
-import time
+
+url = "http://127.0.0.1:8000/token"
+data = {
+    "username": "cv@gmail.com",
+    "password": "testpassword123"
+}
+headers = {
+    "Origin": "http://localhost:5173",
+}
 
 try:
-    resp = requests.get('http://localhost:8009/api/filtered/latest').json()
-    print(f"Status: {resp.get('status')}")
-    print(f"Message: {resp.get('message')}")
-    print(f"Timestamp: {resp.get('timestamp')}")
-    print(f"Device ID (implied): {resp.get('message').split('found for ')[-1] if 'found for' in resp.get('message', '') else 'Unknown'}")
+    response = requests.post(url, data=data, headers=headers)
+    print("STATUS:", response.status_code)
+    try:
+        print("JSON:", response.json())
+    except:
+        print("TEXT:", response.text)
 except Exception as e:
-    print(f"Error: {e}")
+    print("ERROR:", e)

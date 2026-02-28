@@ -26,7 +26,7 @@ export const useRealtimeTelemetry = (isProMode) => {
     // Mock WebSocket connection logic (Ready for real WS)
     const connectWebSocket = useCallback(() => {
         // Placeholder for future WS implementation
-        // const ws = new WebSocket('ws://localhost:8000/ws');
+        // const ws = new WebSocket(import.meta.env.VITE_WS_BASE_URL || '/ws');
         // ws.onmessage = ...
         return null;
     }, []);

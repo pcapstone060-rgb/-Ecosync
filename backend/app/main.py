@@ -154,16 +154,7 @@ def get_db():
     finally:
         db.close()
 
-# --- ML Performance API ---
-@app.get("/api/ml/performance", tags=["ML Performance"])
-def get_ml_performance():
-    return {
-      "model": "Isolation Forest",
-      "precision": 0.91,
-      "recall": 0.88,
-      "f1_score": 0.89,
-      "accuracy": 0.93
-    }
+# --- ML API Endpoints are imported below ---
 
 from .routers import ml_api
 
