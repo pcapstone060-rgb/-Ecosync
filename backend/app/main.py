@@ -246,13 +246,15 @@ async def poll_devices():
                                         humidity=metrics.get("humidityPct"),
                                         pressure=metrics.get("pressureHPa"),
                                         wind_speed=metrics.get("windMS"),
-                                        pm2_5=metrics.get("pm25")
+                                        pm2_5=metrics.get("pm25"),
+                                        # Set gas to None if not present to avoid 0.0 alerts
+                                        gas=metrics.get("gas") 
                                     )
                                     db.add(measurement)
                                     db.commit() 
                                     db.refresh(measurement)
                                     
-                                    # Offload alerts
+                                    # Offload alerts - Pass None for user_email here, check_alerts will handle it
                                     await asyncio.to_thread(check_alerts_wrapper, dev.id, measurement.id)
                         finally:
                             db.close()
@@ -367,23 +369,40 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 
 def check_alerts(db: Session, device: models.Device, measurement: models.SensorData, user_email: Optional[str] = None):
-    """Rule-based alerting with Email Notification (Checks ALL active user settings)"""
+    """Rule-based alerting with Email Notification (User-Aware)"""
     
     current_ts = get_local_time()
-    temp = float(measurement.temperature) if measurement.temperature is not None else 0.0
-    hum = float(measurement.humidity) if measurement.humidity is not None else 0.0
-    gas = float(measurement.gas) if measurement.gas is not None else 0.0
-    rain = float(measurement.rain) if measurement.rain is not None else 4095.0
+    
+    # CRITICAL: Do NOT default None to 0.0 here. Keep as None to skip checks.
+    temp = float(measurement.temperature) if measurement.temperature is not None else None
+    hum = float(measurement.humidity) if measurement.humidity is not None else None
+    gas = float(measurement.gas) if measurement.gas is not None else None
+    rain = float(measurement.rain) if measurement.rain is not None else None
     
     risk_level = getattr(measurement, 'risk_level', 'SAFE')
     smart_insight = getattr(measurement, 'smart_insight', 'Normal environment detected.')
 
     log_alert_activity(f"CHECK: {device.id} | T:{temp}, H:{hum}, G:{gas}, Risk:{risk_level}")
 
-    # 1. Fetch ALL active alert settings
+    # 1. Fetch Alert Settings - Limiting to the intended user only
     try:
-        all_settings = db.query(models.AlertSettings).filter(models.AlertSettings.is_active == True).all()
-        log_alert_activity(f"Found {len(all_settings)} active alert configs.")
+        query = db.query(models.AlertSettings).filter(models.AlertSettings.is_active == True)
+        
+        # If user_email is provided, only alert THAT user.
+        # Otherwise, if it's a polled device, alert the owner.
+        if user_email:
+            query = query.filter(models.AlertSettings.user_email == user_email)
+        elif device.user_id:
+            user = db.query(models.User).get(device.user_id)
+            if user:
+                query = query.filter(models.AlertSettings.user_email == user.email)
+        else:
+            # If no user context at all, skip alerting to avoid spamming the first active user
+            log_alert_activity(f"SKIP Alert: No user context for device {device.id}")
+            return {"status": "skipped", "reason": "no_user_context"}
+
+        all_settings = query.all()
+        log_alert_activity(f"Found {len(all_settings)} applicable alert configs.")
     except Exception as e:
         log_alert_activity(f"DB Error fetching settings: {e}")
         return {"status": "error", "message": "DB Error"}
@@ -399,34 +418,82 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
         G_MAX = settings.gas_threshold or 2000.0
         
         breaches = []
-        if temp > T_MAX: breaches.append(f"Temperature Breach ({temp}°C > {T_MAX}°C)")
-        if gas > G_MAX: breaches.append(f"Air Quality Breach ({gas} > {G_MAX})")
-        if hum > H_MAX or hum < H_MIN: breaches.append(f"Humidity Out of Range ({hum}%)")
+        # Only check if the metric exists (Prevent 0.0 false alerts)
+        if temp is not None and temp > T_MAX: breaches.append(f"Temperature Breach ({temp}°C > {T_MAX}°C)")
+        if gas is not None and gas > G_MAX: breaches.append(f"Air Quality Breach ({gas} > {G_MAX})")
+        if hum is not None and (hum > H_MAX or hum < H_MIN): breaches.append(f"Humidity Out of Range ({hum}%)")
+        
+        # Rain alert logic
+        rain_alert_triggered = False
+        if rain is not None and rain < 1000 and settings.rain_alert:
+            rain_alert_triggered = True
+            breaches.append("Rain Detected")
 
-        # Only alert on ACTUAL threshold breaches — not just elevated risk level
+        # Only alert on ACTUAL threshold breaches
         should_alert = len(breaches) > 0
         
         if should_alert:
+            # --- NEW: Persist Alert Records to Neon Database ---
+            # ALWAYS store alerts for history, even during email cooldown
+            for breach_msg in breaches:
+                # Parse metric name from breach message if possible, else use 'Environment'
+                metric_name = "Environment"
+                if "Temperature" in breach_msg: metric_name = "Temperature"
+                elif "Gas" in breach_msg or "Air Quality" in breach_msg: metric_name = "Air Quality"
+                elif "Humidity" in breach_msg: metric_name = "Humidity"
+                elif "Rain" in breach_msg: metric_name = "Rain"
+
+                # Determine specific value for this metric
+                metric_value = None
+                if metric_name == "Temperature": metric_value = temp
+                elif metric_name == "Humidity": metric_value = hum
+                elif metric_name == "Air Quality": metric_value = gas
+                
+                # Get recipient name from user model if available
+                full_name = "Unknown User"
+                if settings.user:
+                    fname = settings.user.first_name or ""
+                    lname = settings.user.last_name or ""
+                    full_name = f"{fname} {lname}".strip() or target_email
+
+                new_db_alert = models.Alert(
+                    metric=metric_name,
+                    value=metric_value,
+                    message=breach_msg,
+                    recipient_email=target_email,
+                    recipient_name=full_name,
+                    user_id=device.user_id,
+                    timestamp=current_ts
+                )
+                db.add(new_db_alert)
+            
+            # Commit alerts
+            db.commit()
+
+            # --- Now Check Cooldown for Emailing ---
             cooldown_key = f"{device.id}_{target_email}"
             last_sent = alert_cooldowns.get(cooldown_key)
             
             if last_sent and (current_ts - last_sent) < timedelta(minutes=10):
                 remaining = int(10 - (current_ts - last_sent).total_seconds() / 60)
-                log_alert_activity(f"SKIP (Cooldown): {target_email} — next alert in {remaining} min.")
+                log_alert_activity(f"SKIP Email (Cooldown): {target_email} — next email in {remaining} min.")
                 continue
 
             log_alert_activity(f"🔥 TRIGGERING EMAIL to {target_email} | Breaches: {breaches}")
             
             try:
                 # Determine rain status from sensor value (lower = wetter)
-                rain_status = "RAINING" if rain < 1000 else ("DAMP" if rain < 2000 else "DRY")
-                rain_alert = rain < 1000  # Only alert if actively raining
+                rain_status = "N/A"
+                rain_severity = "SAFE"
+                if rain is not None:
+                    rain_status = "RAINING" if rain < 1000 else ("DAMP" if rain < 2000 else "DRY")
+                    rain_severity = "MODERATE" if rain < 1000 else "SAFE"
 
                 alert_payload = [
-                    {"metric": "Temperature", "value": f"{round(temp, 1)}°C", "limit": f"{T_MAX}°C", "status": "CRITICAL" if temp > T_MAX else "SAFE"},
-                    {"metric": "Humidity", "value": f"{round(hum, 1)}%", "limit": f"{H_MAX}%", "status": "CRITICAL" if (hum > H_MAX or hum < H_MIN) else "SAFE"},
-                    {"metric": "Gas Level", "value": f"{round(gas, 1)} ppm", "limit": f"{G_MAX} ppm", "status": "CRITICAL" if gas > G_MAX else "SAFE"},
-                    {"metric": "Rain Sensor", "value": rain_status, "limit": "DRY", "status": "MODERATE" if rain_alert else "SAFE"},
+                    {"metric": "Temperature", "value": f"{round(temp, 1)}°C" if temp is not None else "N/A", "limit": f"{T_MAX}°C", "status": "CRITICAL" if (temp is not None and temp > T_MAX) else "SAFE"},
+                    {"metric": "Humidity", "value": f"{round(hum, 1)}%" if hum is not None else "N/A", "limit": f"{H_MAX}%", "status": "CRITICAL" if (hum is not None and (hum > H_MAX or hum < H_MIN)) else "SAFE"},
+                    {"metric": "Gas Level", "value": f"{round(gas, 1)} ppm" if gas is not None else "N/A", "limit": f"{G_MAX} ppm", "status": "CRITICAL" if (gas is not None and gas > G_MAX) else "SAFE"},
+                    {"metric": "Rain Sensor", "value": rain_status, "limit": "DRY", "status": rain_severity},
                 ]
 
                 # --- Fetch Historical Context from DB ---
@@ -483,17 +550,17 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
 
                 # Build AI Precautions with historical context
                 precautions = []
-                if temp > T_MAX:
+                if temp is not None and temp > T_MAX:
                     lw_note = f" Last {last_week_day} at this time it was {lw_snap['temperature']}°C." if lw_snap and lw_snap.get("temperature") else ""
                     precautions.append(f"🌡️ High Temperature ({round(temp,1)}°C): Increase ventilation, avoid direct sun exposure, check cooling systems.{lw_note}")
-                if gas > G_MAX:
+                if gas is not None and gas > G_MAX:
                     lw_note = f" Last week gas was {lw_snap['gas']} ppm." if lw_snap and lw_snap.get("gas") else ""
                     precautions.append(f"💨 Elevated Gas ({round(gas,1)} ppm): Evacuate the area immediately, open windows, avoid ignition sources.{lw_note}")
-                if hum > H_MAX:
+                if hum is not None and hum > H_MAX:
                     precautions.append(f"💧 High Humidity ({round(hum,1)}%): Run dehumidifiers, check for water leaks, prevent mold growth.")
-                elif hum < H_MIN:
+                elif hum is not None and hum < H_MIN:
                     precautions.append(f"🏜️ Low Humidity ({round(hum,1)}%): Use a humidifier, stay hydrated, protect sensitive equipment.")
-                if rain_alert:
+                if rain is not None and rain < 1000:
                     precautions.append(f"🌧️ Rain Detected: Secure outdoor equipment, check drainage systems, avoid electrical hazards near water.")
 
                 precaution_text = " | ".join(precautions) if precautions else "No immediate action required."
@@ -958,18 +1025,30 @@ def get_historical_context(user_email: Optional[str] = None, db: Session = Depen
 @app.get("/api/filtered/latest", tags=["IoT"])
 async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = Depends(get_db)):
     """Returns latest Kalman-filtered data with user-aware thresholds."""
-    # Debug: Try ESP32_MAIN first
+    
+    # User-aware device lookup
+    target_device_id = "ESP32_MAIN" # Logical default
+    if user_email:
+        id_sanitized = user_email.replace("@", "_").replace(".", "_")
+        target_device_id = f"DASHBOARD_{id_sanitized}"
+        
     reading = db.query(models.SensorData).filter(
-        models.SensorData.device_id == "ESP32_MAIN"
+        models.SensorData.device_id == target_device_id
     ).order_by(models.SensorData.timestamp.desc()).first()
     
+    if not reading:
+        # Fallback to general main if user-specific not found
+        reading = db.query(models.SensorData).filter(
+            models.SensorData.device_id == "ESP32_MAIN"
+        ).order_by(models.SensorData.timestamp.desc()).first()
+        
     if not reading:
         # Debug: Try ANY device
         last_any = db.query(models.SensorData).order_by(models.SensorData.timestamp.desc()).first()
         if last_any:
              reading = last_any
         else:
-             return {"status": "no_data", "message": "No ESP32 data available"}
+             return {"status": "no_data", "message": "No sensor data available"}
     
     # Calculate AQI
     aqi_result = aqi_calculator.calculate_overall_aqi({"pm25": reading.pm2_5})
@@ -1193,6 +1272,19 @@ def update_alert_settings(settings: schemas.AlertSettingsCreate, db: Session = D
     db.commit()
     db.refresh(db_settings)
     return db_settings
+@app.get("/api/alerts", tags=["IoT"])
+def get_historical_alerts(user_email: Optional[str] = None, limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Returns historical safety alerts for the user.
+    """
+    query = db.query(models.Alert)
+    if user_email:
+        query = query.filter(models.Alert.recipient_email == user_email)
+    
+    alerts = query.order_by(models.Alert.timestamp.desc()).limit(limit).all()
+    return alerts
+
+
 @app.get("/realtime/map", tags=["Map"])
 async def get_realtime_map_data():
     markers = get_cached_markers()

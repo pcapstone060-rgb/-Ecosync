@@ -81,6 +81,7 @@ class Alert(Base):
     email_sent = Column(Boolean, default=False)
     timestamp = Column(DateTime, default=get_local_time)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    recipient_name = Column(String, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="alerts")
@@ -90,6 +91,9 @@ class AlertSettings(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_email = Column(String, ForeignKey("users.email"), nullable=True)
+    
+    # Relationships
+    user = relationship("User")
     temp_threshold = Column(Float, default=45.0)
     humidity_min = Column(Float, default=20.0)
     humidity_max = Column(Float, default=80.0)

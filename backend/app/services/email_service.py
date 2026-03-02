@@ -66,13 +66,18 @@ class EmailService:
                     anomaly = snap.get("anomaly_label", "Normal")
                     badge_color = "#ef4444" if anomaly not in ("Normal", "normal") else "#10b981"
                     insight = snap.get("smart_insight", "")
+                    
+                    t_val = f"{snap['temperature']}°C" if snap.get('temperature') is not None else "—"
+                    h_val = f"{snap['humidity']}%" if snap.get('humidity') is not None else "—"
+                    g_val = f"{snap['gas']} ppm" if snap.get('gas') is not None else "—"
+                    
                     insight_row = f"""<tr><td colspan="5" style="padding: 2px 16px 10px; font-size: 11px; color: #6b7280; font-style: italic;">💬 {insight}</td></tr>""" if insight else ""
                     return f"""
                     <tr style="border-bottom: 1px solid #e0f2fe;">
                         <td style="padding: 10px 16px; font-weight: 600; color: #0369a1; font-size: 13px; white-space: nowrap;">{icon} {label}</td>
-                        <td style="padding: 10px 8px; color: #0c4a6e; font-size: 13px; font-weight: 600;">{snap['temperature']}°C</td>
-                        <td style="padding: 10px 8px; color: #0c4a6e; font-size: 13px;">{snap.get('humidity', '—')}%</td>
-                        <td style="padding: 10px 8px; color: #0c4a6e; font-size: 13px;">{snap.get('gas', '—')} ppm</td>
+                        <td style="padding: 10px 8px; color: #0c4a6e; font-size: 13px; font-weight: 600;">{t_val}</td>
+                        <td style="padding: 10px 8px; color: #0c4a6e; font-size: 13px;">{h_val}</td>
+                        <td style="padding: 10px 8px; color: #0c4a6e; font-size: 13px;">{g_val}</td>
                         <td style="padding: 10px 16px;"><span style="background: {badge_color}20; color: {badge_color}; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700;">{anomaly}</span></td>
                     </tr>{insight_row}"""
                 return f"""<tr><td colspan="5" style="padding: 10px 16px; color: #9ca3af; font-size: 12px; font-style: italic;">{icon} No data recorded {label.lower()} at this time.</td></tr>"""

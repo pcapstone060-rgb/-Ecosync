@@ -128,6 +128,7 @@ class AlertResponse(BaseModel):
     value: float
     message: str
     recipient_email: str
+    recipient_name: Optional[str] = None
     email_sent: bool
     created_at: datetime
 

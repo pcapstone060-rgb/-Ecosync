@@ -29,25 +29,63 @@ const ProtocolIcon = ({ id }) => {
 const SafetyHub = () => {
 
     const { history: sensorData, connected } = useEsp32Stream('light');
+    const [dbAlerts, setDbAlerts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Derived State for Alerts
+    // Fetch historical alerts from database
+    React.useEffect(() => {
+        const fetchAlerts = async () => {
+            try {
+                // Get user email from localStorage (consistent with other parts of the app)
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                const email = user?.email || '';
+
+                const response = await fetch(`/api/alerts?user_email=${email}&limit=20`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDbAlerts(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch historical alerts:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAlerts();
+    }, []);
+
+    // Derived State for Alerts (Merged Real-time + DB)
     const activeAlerts = useMemo(() => {
-        const alerts = [];
+        const rtAlerts = [];
         const latestInfo = sensorData && sensorData.length > 0 ? sensorData[sensorData.length - 1] : null;
 
         if (latestInfo) {
-            if (latestInfo.temperature > 40) alerts.push({ type: 'FIRE', level: 'CRITICAL', message: 'High Temperature Detected! Potential Fire Hazard.' });
-            if (latestInfo.mq_raw > 2000) alerts.push({ type: 'GAS', level: 'CRITICAL', message: 'Dangerous Gas Levels! Evacuate immediately.' });
-            if (latestInfo.motion === 1) alerts.push({ type: 'INTRUSION', level: 'WARNING', message: 'Unrecognized motion in restricted area.' });
+            if (latestInfo.temperature > 40) rtAlerts.push({ type: 'FIRE', level: 'CRITICAL', message: 'High Temperature Detected! Potential Fire Hazard.', timestamp: new Date() });
+            if (latestInfo.mq_raw > 2000) rtAlerts.push({ type: 'GAS', level: 'CRITICAL', message: 'Dangerous Gas Levels! Evacuate immediately.', timestamp: new Date() });
+            if (latestInfo.motion === 1) rtAlerts.push({ type: 'INTRUSION', level: 'WARNING', message: 'Unrecognized motion in restricted area.', timestamp: new Date() });
         }
+
+        // Map DB alerts to the format used in the UI
+        const historicalFormatted = dbAlerts.map(a => ({
+            type: a.metric.toUpperCase(),
+            level: 'CRITICAL', // Assuming DB alerts are critical breaches
+            message: a.message,
+            timestamp: new Date(a.timestamp),
+            isHistorical: true
+        }));
+
+        const merged = [...rtAlerts, ...historicalFormatted];
 
         // Demo Alert if empty (For visualization)
-        if (alerts.length === 0 && !connected) {
-            alerts.push({ type: 'SYSTEM', level: 'INFO', message: 'System in Monitor Mode. No active threats.' });
+        if (merged.length === 0 && !connected) {
+            merged.push({ type: 'SYSTEM', level: 'INFO', message: 'System in Monitor Mode. No active threats.', timestamp: new Date() });
         }
 
-        return alerts;
-    }, [sensorData, connected]);
+        // Sort by timestamp descending
+        return merged.sort((a, b) => b.timestamp - a.timestamp);
+    }, [sensorData, connected, dbAlerts]);
 
     const [expandedProtocol, setExpandedProtocol] = useState(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -167,16 +205,16 @@ const SafetyHub = () => {
 
                         <div className="space-y-3">
                             {activeAlerts.map((alert, index) => (
-                                <div key={index} className="p-4 rounded-xl border flex items-start gap-4 bg-slate-800/50 border-slate-700">
-                                    <div className="p-2 rounded-lg bg-slate-700 text-slate-300">
+                                <div key={index} className={`p-4 rounded-xl border flex items-start gap-4 ${alert.isHistorical ? 'bg-slate-900/40 border-slate-800 opacity-80' : 'bg-slate-800/50 border-slate-700'}`}>
+                                    <div className={`p-2 rounded-lg ${alert.isHistorical ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-slate-300'}`}>
                                         <Megaphone size={20} className="text-current" />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-xs font-black px-2 py-0.5 rounded bg-slate-700 text-slate-300">
-                                                {alert.level}
+                                            <span className={`text-xs font-black px-2 py-0.5 rounded ${alert.isHistorical ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-slate-300'}`}>
+                                                {alert.level} {alert.isHistorical && '(ARCHIVED)'}
                                             </span>
-                                            <span className="text-slate-400 text-xs font-mono">{new Date().toLocaleTimeString()}</span>
+                                            <span className="text-slate-400 text-xs font-mono">{alert.timestamp.toLocaleTimeString()}</span>
                                         </div>
                                         <p className="text-slate-200 font-medium">{alert.message}</p>
                                     </div>
