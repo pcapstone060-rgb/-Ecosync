@@ -282,7 +282,7 @@ class IsolationForestAnomalyDetector:
     Advanced multi-sensor anomaly detection using Isolation Forest.
     Learns patterns across Temperature, Humidity, Gas, and PM2.5.
     """
-    def __init__(self, contamination=0.05, n_estimators=100, random_state=42):
+    def __init__(self, contamination=0.005, n_estimators=100, random_state=42):
         self.model = IsolationForest(
             contamination=contamination,
             n_estimators=n_estimators,
@@ -343,7 +343,9 @@ class IsolationForestAnomalyDetector:
             # scikit-learn's decision_function returns signed distance to hyperplane
             score = self.model.decision_function(X_scaled)[0]
             
-            label = "ANOMALY" if prediction == -1 else "NORMAL"
+            # Anomaly logic: Ensure it's not just a slight deviation.
+            # Only trigger Anomaly if prediction is -1 AND the confidence score is a strong negative
+            label = "ANOMALY" if prediction == -1 and score < -0.05 else "NORMAL"
             return label, float(score)
         except Exception as e:
             log_ml_activity(f"Prediction error: {e}")
