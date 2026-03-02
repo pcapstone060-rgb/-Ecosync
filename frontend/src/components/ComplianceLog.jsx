@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ClipboardCheck, CheckCircle2, AlertCircle, Clock, CalendarDays } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import API_BASE_URL from '../config';
 
 const ComplianceLog = () => {
     const { currentUser } = useAuth();
@@ -30,7 +31,7 @@ const ComplianceLog = () => {
     const fetchLogs = async () => {
         setError(null);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/compliance/logs`);
+            const res = await fetch(`${API_BASE_URL}/api/compliance/logs`);
             if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
             const data = await res.json();
@@ -57,7 +58,7 @@ const ComplianceLog = () => {
     const fetchHistory = async () => {
         setError(null);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/compliance/logs?history=true`);
+            const res = await fetch(`${API_BASE_URL}/api/compliance/logs?history=true`);
             if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
             const data = await res.json();
@@ -99,7 +100,7 @@ const ComplianceLog = () => {
             const verifier = currentUser?.email || "supervisor@ecosync.com";
             console.log("Verifier:", verifier);
 
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/compliance/verify`, {
+            const res = await fetch(`${API_BASE_URL}/api/compliance/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

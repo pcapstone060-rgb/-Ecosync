@@ -5,10 +5,12 @@ import os
 import sys
 
 # Set SQLite database URL
-os.environ["DATABASE_URL"] = "sqlite:///./iot_system.db"
+os.environ["DATABASE_URL"] = "sqlite:///./dev_database.db"
 
 from app.database import engine, Base
+# Import all models here so they register with Base.metadata
 from app import models
+from app.models import User, Device, SensorData, Alert, AlertSettings, SafetyLog, MLLog
 
 def recreate_tables():
     print("🔧 Recreating database tables...")

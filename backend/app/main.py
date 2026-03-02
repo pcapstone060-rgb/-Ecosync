@@ -142,6 +142,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import traceback
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_detail = traceback.format_exc()
+    print(f"GLOBAL EXCEPTION CAUGHT: {error_detail}")
+    with open("crash.log", "a") as f:
+        f.write(f"\n--- {dt.now()} ---\n{error_detail}\n")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "traceback": error_detail},
+    )
+
 # --- Security Headers ---
 # app.add_middleware(
 #     TrustedHostMiddleware, 

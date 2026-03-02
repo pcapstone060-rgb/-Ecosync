@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 import pytz
 
-Base = declarative_base()
+from .database import Base
 
 def get_local_time():
     local_tz = pytz.timezone('Asia/Kolkata')

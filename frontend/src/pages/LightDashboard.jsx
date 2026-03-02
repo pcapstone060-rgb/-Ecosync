@@ -401,6 +401,17 @@ const LightDashboard = ({ onToggle, initialView = 'overview' }) => {
                             <Zap size={14} /> {connectionStatus ? 'RECONNECT' : 'CONNECT ESP32'}
                         </button>
                         <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-2 mb-1">
+                                {connectionStatus ? (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 flex items-center gap-1">
+                                        🟢 Hardware Connected
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/50 flex items-center gap-1">
+                                        🔴 Waiting for Device
+                                    </span>
+                                )}
+                            </div>
                             <div className={`px-3 py-1 rounded-full text-[10px] font-black border tracking-widest ${connectionStatus ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : (latestData.timestamp && (Date.now() - new Date(latestData.timestamp).getTime() < 60000)) ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-red-500/20 border-red-500 text-red-400'}`}>
                                 {connectionStatus ? 'SERIAL ACTIVE' : (latestData.timestamp && (Date.now() - new Date(latestData.timestamp).getTime() < 60000)) ? 'ONLINE (BRIDGE)' : 'NO DEVICE'}
                             </div>

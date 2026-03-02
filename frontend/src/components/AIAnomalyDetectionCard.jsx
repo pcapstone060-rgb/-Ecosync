@@ -30,6 +30,17 @@ const AIAnomalyDetectionCard = () => {
     const status = metrics?.status || 'NORMAL';
     const isAnomaly = status === 'ANOMALY';
 
+    const getDataSourceConfig = (source) => {
+        switch (source) {
+            case 'live':
+                return { label: 'LIVE', color: 'text-emerald-400', bg: 'bg-emerald-900/40', border: 'border-emerald-500/30' };
+            case 'historical':
+                return { label: 'HISTORICAL', color: 'text-indigo-400', bg: 'bg-indigo-900/40', border: 'border-indigo-500/30' };
+            default:
+                return { label: 'SIMULATION', color: 'text-amber-400', bg: 'bg-amber-900/40', border: 'border-amber-500/30' };
+        }
+    };
+
     return (
         <div className={`relative p-5 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col justify-between overflow-hidden group hover:border-indigo-500/50 transition-all`}>
             <div className={`absolute top-2 right-2 p-2 opacity-20 text-indigo-400`}>
@@ -43,6 +54,15 @@ const AIAnomalyDetectionCard = () => {
                 <h3 className={`text-2xl font-black font-mono tracking-tighter mt-1 mb-1 ${isAnomaly ? 'text-red-400' : 'text-emerald-400'}`}>
                     {status} {isAnomaly ? '🔴' : '🟢'}
                 </h3>
+
+                {metrics?.data_source && (
+                    <div className="mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getDataSourceConfig(metrics.data_source).bg} ${getDataSourceConfig(metrics.data_source).color} ${getDataSourceConfig(metrics.data_source).border}`}>
+                            DATA SOURCE: {getDataSourceConfig(metrics.data_source).label}
+                        </span>
+                    </div>
+                )}
+
                 <div className="space-y-1 mt-2">
                     <div className="flex justify-between text-[10px] font-bold">
                         <span className="text-slate-500">SCORE:</span>

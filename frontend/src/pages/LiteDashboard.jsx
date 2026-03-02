@@ -1,4 +1,6 @@
+import React, { useState, useEffect, useMemo } from 'react';
 import { Activity, Droplets, Thermometer, Wind, AlertTriangle, Wifi, Zap, Cloud, Brain, ShieldCheck, FlaskConical } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import API_BASE_URL from '../config';
 
 const SmartInsightCard = ({ insight, anomaly }) => {
@@ -46,24 +48,8 @@ const StatCard = ({ title, value, unit, icon: Icon, color, trend }) => (
 );
 
 const LiteDashboard = ({ sensorData, alerts, connectionStatus, onSwitchToPro }) => {
-    const [iotConnected, setIotConnected] = useState(false);
-
-    useEffect(() => {
-        const fetchIoTStatus = async () => {
-            try {
-                const res = await fetch(`${API_BASE_URL}/iot/status`);
-                if (res.ok) {
-                    const status = await res.json();
-                    setIotConnected(status.connected);
-                }
-            } catch (e) {
-                setIotConnected(false);
-            }
-        };
-        fetchIoTStatus();
-        const interval = setInterval(fetchIoTStatus, 5000);
-        return () => clearInterval(interval);
-    }, []);
+    // Determine local device connection status
+    const isHardwareConnected = connectionStatus === 'connected' || (sensorData && sensorData.length > 0);
 
     // Memoized Derived Values
     const latestData = useMemo(() => {
@@ -130,10 +116,20 @@ const LiteDashboard = ({ sensorData, alerts, connectionStatus, onSwitchToPro }) 
                     <h1 className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500 mb-2 font-black tracking-tighter">
                         LITE MONITOR
                     </h1>
-                    <p className="text-slate-400 font-mono text-sm">
-                        STATUS: <span className="text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]">ONLINE</span>
-                        <span className="mx-2 text-slate-600">|</span>
-                        <span className="text-slate-500">HARDWARE STREAMING</span>
+                    <p className="text-slate-400 font-mono text-sm flex items-center gap-3">
+                        <span>STATUS: <span className="text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]">ONLINE</span></span>
+                        <span className="text-slate-600">|</span>
+                        {isHardwareConnected ? (
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                HARDWARE CONNECTED
+                            </span>
+                        ) : (
+                            <span className="bg-amber-500/10 text-amber-500 text-[10px] px-2 py-0.5 rounded-full border border-amber-500/20 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" />
+                                WAITING FOR DEVICE
+                            </span>
+                        )}
                     </p>
                 </div>
                 {onSwitchToPro && (

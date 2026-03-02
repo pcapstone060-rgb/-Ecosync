@@ -26,12 +26,10 @@ from google.auth.transport import requests
 
 
 def get_db():
-    print(f">>> TRACE: get_db starting at {dt.now().isoformat()}")
     db = database.SessionLocal()
     try:
         yield db
     finally:
-        print(f">>> TRACE: get_db closing at {dt.now().isoformat()}")
         db.close()
 
 

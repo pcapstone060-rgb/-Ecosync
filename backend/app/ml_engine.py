@@ -371,7 +371,8 @@ def load_historical_data(limit: int = 1000) -> List[Dict]:
             {
                 "temperature": r.temperature,
                 "humidity": r.humidity,
-                "gas": r.gas
+                "gas": r.gas,
+                "timestamp": r.timestamp
             } for r in records
         ]
     except Exception as e:
@@ -620,8 +621,28 @@ def calculate_isolation_forest_performance():
             "recall": 0.0,
             "f1_score": 0.0,
             "accuracy": 0.0,
-            "total_samples": 0
+            "total_samples": 0,
+            "data_source": "synthetic"
         }
+    
+    # Check data source freshness based on the most recent record (index 0)
+    data_source = "historical"
+    latest_record_time = data[0].get("timestamp")
+    if latest_record_time:
+        import pytz
+        # Assume naive datetime from DB is UTC or local depending on your setup. 
+        # Using the same get_local_time logic from main.py
+        local_tz = pytz.timezone('Asia/Kolkata')
+        now_local = datetime.now(local_tz).replace(tzinfo=None)
+        
+        time_diff = (now_local - latest_record_time).total_seconds()
+        if time_diff <= 30:
+            data_source = "live"
+        else:
+            data_source = "historical"
+    else:
+        # Fallback if somehow timestamp is missing
+        data_source = "synthetic"
         
     y_true = []
     iso_pred_labels = []
@@ -676,5 +697,6 @@ def calculate_isolation_forest_performance():
         "f1_score": metrics.get("f1", 0.0),
         "accuracy": metrics.get("accuracy", 0.0),
         "total_samples": len(data),
-        "confusion_matrix": cm
+        "confusion_matrix": cm,
+        "data_source": data_source
     }
