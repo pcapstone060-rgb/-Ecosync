@@ -401,18 +401,60 @@ class IoTAnomalyDetector:
     def update_config(self, new_config: dict):
         self.config.update(new_config)
 
-    def check_thresholds(self, data: dict):
+    def check_thresholds(self, data: dict, user_config: dict = None):
         alerts = []
         precautions = []
         
+        # Default fallback if no user config exists (should be rare)
+        if not user_config:
+            user_config = {
+                "temp_threshold": 45.0,
+                "humidity_min": 20.0,
+                "humidity_max": 80.0,
+                "gas_threshold": 600.0,
+                "pm25_threshold": 150.0,
+                "wind_threshold": 30.0
+            }
+            
+        t_max = user_config.get("temp_threshold") or 45.0
+        h_min = user_config.get("humidity_min") or 20.0
+        h_max = user_config.get("humidity_max") or 80.0
+        g_max = user_config.get("gas_threshold") or 600.0
+        pm25_max = user_config.get("pm25_threshold") or 150.0
+        wind_max = user_config.get("wind_threshold") or 30.0
+        
         # Temperature
-        if data['temperature'] > self.config['TEMP_MAX']:
-            alerts.append(f"Temperature High (> {self.config['TEMP_MAX']}°C)")
-            precautions.append("Hydrate immediately and avoid direct sunlight.")
-            precautions.append("Check device cooling systems.")
-        elif data['temperature'] < self.config['TEMP_MIN']:
-            alerts.append(f"Temperature Low (< {self.config['TEMP_MIN']}°C)")
-            precautions.append("Ensure thermal insulation is active.")
+        if data.get('temperature') is not None:
+             if data['temperature'] > t_max:
+                 alerts.append(f"Temperature High (> {t_max}°C)")
+                 precautions.append("Hydrate immediately and avoid direct sunlight. Check device cooling systems.")
+                 
+        # Humidity
+        if data.get('humidity') is not None:
+             if data['humidity'] > h_max:
+                 alerts.append(f"Humidity High (> {h_max}%)")
+                 precautions.append("Run dehumidifiers, check for water leaks.")
+             elif data['humidity'] < h_min:
+                 alerts.append(f"Humidity Low (< {h_min}%)")
+                 precautions.append("Use a humidifier, protect sensitive equipment.")
+                 
+        # Gas
+        if data.get('gas') is not None:
+             if data['gas'] > g_max:
+                 alerts.append(f"Air Quality Breach (> {g_max} ppm)")
+                 precautions.append("Evacuate the area immediately, open windows, avoid ignition sources.")
+                 
+        # PM2.5
+        if data.get('pm2_5') is not None:
+             if data['pm2_5'] > pm25_max:
+                 alerts.append(f"PM2.5 High (> {pm25_max} µg/m³)")
+                 precautions.append("Wear masks, turn on air purifiers immediately.")
+                 
+        # Wind Speed
+        if data.get('wind_speed') is not None:
+             if data['wind_speed'] > wind_max:
+                 alerts.append(f"High Wind Speed (> {wind_max} km/h)")
+                 precautions.append("Secure loose outdoor objects, stay clear of weak structures.")
 
         return alerts, precautions
 

@@ -98,6 +98,8 @@ class AlertSettings(Base):
     humidity_min = Column(Float, default=20.0)
     humidity_max = Column(Float, default=80.0)
     gas_threshold = Column(Float, default=600.0)
+    pm25_threshold = Column(Float, default=150.0)
+    wind_threshold = Column(Float, default=30.0)
     rain_alert = Column(Boolean, default=True)
     motion_alert = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)

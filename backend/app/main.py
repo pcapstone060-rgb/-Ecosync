@@ -416,12 +416,21 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
         H_MIN = settings.humidity_min or 20.0
         H_MAX = settings.humidity_max or 80.0
         G_MAX = settings.gas_threshold or 2000.0
+        PM25_MAX = getattr(settings, 'pm25_threshold', 150.0) or 150.0
+        WIND_MAX = getattr(settings, 'wind_threshold', 30.0) or 30.0
         
         breaches = []
         # Only check if the metric exists (Prevent 0.0 false alerts)
         if temp is not None and temp > T_MAX: breaches.append(f"Temperature Breach ({temp}°C > {T_MAX}°C)")
         if gas is not None and gas > G_MAX: breaches.append(f"Air Quality Breach ({gas} > {G_MAX})")
         if hum is not None and (hum > H_MAX or hum < H_MIN): breaches.append(f"Humidity Out of Range ({hum}%)")
+        
+        # Check newly added metrics if present in measurement
+        pm25 = float(measurement.pm2_5) if hasattr(measurement, 'pm2_5') and measurement.pm2_5 is not None else None
+        wind = float(measurement.wind_speed) if hasattr(measurement, 'wind_speed') and measurement.wind_speed is not None else None
+        
+        if pm25 is not None and pm25 > PM25_MAX: breaches.append(f"PM2.5 Breach ({pm25} > {PM25_MAX})")
+        if wind is not None and wind > WIND_MAX: breaches.append(f"Wind Speed Breach ({wind} > {WIND_MAX})")
         
         # Rain alert logic
         rain_alert_triggered = False
@@ -493,6 +502,8 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
                     {"metric": "Temperature", "value": f"{round(temp, 1)}°C" if temp is not None else "N/A", "limit": f"{T_MAX}°C", "status": "CRITICAL" if (temp is not None and temp > T_MAX) else "SAFE"},
                     {"metric": "Humidity", "value": f"{round(hum, 1)}%" if hum is not None else "N/A", "limit": f"{H_MAX}%", "status": "CRITICAL" if (hum is not None and (hum > H_MAX or hum < H_MIN)) else "SAFE"},
                     {"metric": "Gas Level", "value": f"{round(gas, 1)} ppm" if gas is not None else "N/A", "limit": f"{G_MAX} ppm", "status": "CRITICAL" if (gas is not None and gas > G_MAX) else "SAFE"},
+                    {"metric": "PM2.5", "value": f"{round(pm25, 1)} µg/m³" if pm25 is not None else "N/A", "limit": f"{PM25_MAX} µg/m³", "status": "CRITICAL" if (pm25 is not None and pm25 > PM25_MAX) else "SAFE"},
+                    {"metric": "Wind Speed", "value": f"{round(wind, 1)} km/h" if wind is not None else "N/A", "limit": f"{WIND_MAX} km/h", "status": "CRITICAL" if (wind is not None and wind > WIND_MAX) else "SAFE"},
                     {"metric": "Rain Sensor", "value": rain_status, "limit": "DRY", "status": rain_severity},
                 ]
 
@@ -730,11 +741,26 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
         filtered_hum, hum_conf = kf_instance.filter_humidity(hum_val)
         mq_cleaned = kf_instance.clean_mq_data(data.mq_raw)
 
+        # Fetch User's SPECIFIC Alert Thresholds
+        user_config_dict = None
+        if data.user_email:
+            settings_obj = db.query(models.AlertSettings).filter(models.AlertSettings.user_email == data.user_email).first()
+            if settings_obj:
+                user_config_dict = {
+                     "temp_threshold": settings_obj.temp_threshold,
+                     "humidity_min": settings_obj.humidity_min,
+                     "humidity_max": settings_obj.humidity_max,
+                     "gas_threshold": settings_obj.gas_threshold,
+                     "pm25_threshold": getattr(settings_obj, 'pm25_threshold', 150.0), # handle db migration safely
+                     "wind_threshold": getattr(settings_obj, 'wind_threshold', 30.0)
+                }
+                
         # 1b. Trust Score & Anomaly Detection
         current_data = {
             "temperature": filtered_temp,
             "humidity": filtered_hum,
-            "gas": data.gas or mq_cleaned["smoothed"]
+            "gas": data.gas or mq_cleaned["smoothed"],
+            "wind_speed": data.wind_speed
         }
         
         trust_score = trust_calculator.calculate_score(current_data)
@@ -742,7 +768,7 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
             filtered_temp, filtered_hum, current_data["gas"]
         ])
         
-        anomalies_list, precautions = anomaly_detector.check_thresholds(current_data)
+        anomalies_list, precautions = anomaly_detector.check_thresholds(current_data, user_config=user_config_dict)
         smart_insight = insight_generator.generate_insight(current_data, anomalies_list)
         
         if is_anomaly:
@@ -787,12 +813,10 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
 
         # New Smart Alert Logic (Phase 2) - Calculated for EVERY request
         log_alert_activity(f"Calling generate_full_report for {data.user_email}")
+        full_data_for_report = current_data.copy()
+        
         smart_report = insight_generator.generate_full_report(
-            {
-                "temperature": data.temperature,
-                "gas": data.mq_raw, # Using mq_raw as gas proxy
-                "humidity": data.humidity
-            },
+            full_data_for_report,
             anomalies_list
         )
         
