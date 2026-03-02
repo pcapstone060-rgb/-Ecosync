@@ -4,6 +4,11 @@ from sqlalchemy.orm import Session
 from .. import schemas, models, database
 from ..services import otp as otp_service
 from ..core import security
+import pytz
+
+def get_local_time():
+    local_tz = pytz.timezone('Asia/Kolkata')
+    return datetime.now(local_tz).replace(tzinfo=None)
 
 router = APIRouter(tags=["OTP Auth"])
 
@@ -20,7 +25,7 @@ def send_otp(request: schemas.OTPRequest, db: Session = Depends(get_db)):
     code = otp_service.generate_otp(length=4)
     
     # 2. Store in DB (invalidate old ones?)
-    expires = datetime.utcnow() + timedelta(minutes=5)
+    expires = get_local_time() + timedelta(minutes=5)
     otp_entry = models.OTPCode(
         phone_number=request.phone_number,
         code=code,
@@ -41,7 +46,7 @@ def verify_otp(request: schemas.OTPVerify, db: Session = Depends(get_db)):
         models.OTPCode.phone_number == request.phone_number,
         models.OTPCode.code == request.code,
         models.OTPCode.is_used == False,
-        models.OTPCode.expires_at > datetime.utcnow()
+        models.OTPCode.expires_at > get_local_time()
     ).first()
     
     if not otp_record:

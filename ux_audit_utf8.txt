@@ -1,18 +1,18 @@
 ﻿
-[UX AUDIT] 65 files checked
+[UX AUDIT] 66 files checked
 --------------------------------------------------
 [!] ISSUES (19):
   - [Cognitive Load] boilerplate.css: Form inputs without labels. Use <label> for accessibility and clarity.
   - [Cognitive Load] App.css: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Cognitive Load] AIAnomalyDetectionCard.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
   - [Cognitive Load] AIModelPerformanceCard.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
-  - [Color] AIModelPerformanceCard.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
   - [Cognitive Load] AIAnalysisCard.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
   - [Color] LiteView.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
   - [Color] ProView.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
   - [Cognitive Load] Common.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
   - [Cognitive Load] AuthContext.jsx: Form inputs without labels. Use <label> for accessibility and clarity.
   - [Color] DashboardLayout.jsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
-[*] WARNINGS (405):
+[*] WARNINGS (415):
   - [Serial Position] all_figures.html: Last nav item may not be important. Place key actions at start/end.
   - [Animation] ipython_inline_figure.html: Async operations without loading indicator. Add skeleton or spinner for perceived performance.
   - [Serial Position] single_figure.html: Last nav item may not be important. Place key actions at start/end.

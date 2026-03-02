@@ -20,22 +20,24 @@ if not exist "frontend\node_modules" (
     exit /b 1
 )
 
-echo [1/3] Configuring backend for local SQLite database...
+echo [1/3] Checking backend .env configuration...
 cd backend
 
-REM Create a local .env file for development
-(
-echo DATABASE_URL=sqlite:///./iot_system.db
-echo SECRET_KEY=local-dev-secret-key-change-in-production
-echo ALGORITHM=HS256
-echo ACCESS_TOKEN_EXPIRE_MINUTES=30
-echo EMAIL_USER=sreekar092004@gmail.com
-echo EMAIL_PASS=orzh vstq rnsp gpwi
-echo GEMINI_API_KEY=AIzaSyDcpyUQnn24R_jxjRveR0Mpvl8eofaK1iM
-) > .env
+if not exist ".env" (
+    echo Creating default SQLite .env file...
+    (
+    echo DATABASE_URL=sqlite:///./iot_system.db
+    echo SECRET_KEY=local-dev-secret-key-change-in-production
+    echo ALGORITHM=HS256
+    echo ACCESS_TOKEN_EXPIRE_MINUTES=30
+    echo EMAIL_USER=sreekar092004@gmail.com
+    echo EMAIL_PASS=orzh vstq rnsp gpwi
+    echo GEMINI_API_KEY=AIzaSyDcpyUQnn24R_jxjRveR0Mpvl8eofaK1iM
+    ) > .env
+)
 
-echo [2/3] Starting Backend Server on port 8000 (SQLite Mode)...
-start "Ecosync Backend" cmd /k "venv\Scripts\activate && set PYTHONIOENCODING=utf-8 && set DATABASE_URL=sqlite:///./iot_system.db && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+echo [2/3] Starting Backend Server on port 8000...
+start "Ecosync Backend" cmd /k "venv\Scripts\activate && set PYTHONIOENCODING=utf-8 && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
 timeout /t 3 /nobreak > nul
 

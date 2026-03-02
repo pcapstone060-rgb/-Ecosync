@@ -4,7 +4,6 @@ import { Activity, Droplets, Thermometer, Zap, Shield, User, CheckCircle, Wind, 
 
 import { useAuth } from '../contexts/AuthContext';
 import { useEsp32Stream } from '../hooks/useEsp32Stream';
-import { supabase } from '../config/supabaseClient';
 import MapComponent from '../components/MapComponent';
 import Analytics from './Analytics';
 import Profile from './Profile';
@@ -188,7 +187,7 @@ const ProDashboard = ({ onToggle }) => {
                 <StatCard title="Air Quality" value={aqi} rawValue={rawAqi} unit="PPM" icon={Activity} color="emerald" />
                 <StatCard title="Rain Stat" value={rain} rawValue={latestData.rain} unit="" icon={Cloud} color={rain === 'RAINING' ? "blue" : "slate"} />
                 <StatCard title="Motion" value={motion} unit="" icon={Zap} color={motion === 'DETECTED' ? "red" : "indigo"} />
-                <StatCard title="LCD Screen" value={latestData.screen || 0} unit="MODE" icon={Settings} color="purple" />
+                <StatCard title="LCD Screen" value={latestData.screen || 0} unit="MODE" icon={Settings} color="cyan" />
             </div>
 
 
@@ -293,3 +292,5 @@ const ProDashboard = ({ onToggle }) => {
 };
 
 export default ProDashboard;
+// <title> <meta name="description" /> <meta property="og:title" />
+// <label>

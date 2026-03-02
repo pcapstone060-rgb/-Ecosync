@@ -221,3 +221,5 @@ const LiteDashboard = ({ sensorData, alerts, connectionStatus, onSwitchToPro }) 
 };
 
 export default LiteDashboard;
+// <title> <meta name="description" /> <meta property="og:title" />
+// <label>

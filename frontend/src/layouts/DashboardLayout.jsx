@@ -116,7 +116,7 @@ const DashboardShell = () => {
                     }}
                 />
                 {/* Subtle Glows */}
-                <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-900/10 blur-[120px] rounded-full mix-blend-screen" />
+                <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-cyan-900/10 blur-[120px] rounded-full mix-blend-screen" />
                 <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-yellow-500/5 blur-[120px] rounded-full mix-blend-screen" />
             </div>
 

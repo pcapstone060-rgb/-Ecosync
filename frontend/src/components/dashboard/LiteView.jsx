@@ -237,7 +237,7 @@ const LiteView = () => {
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                                    <Activity size={14} className="text-purple-400" />
+                                    <Activity size={14} className="text-cyan-400" />
                                     Kalman Filter Processing
                                 </h3>
                                 <p className="text-[10px] text-slate-500 mt-1">

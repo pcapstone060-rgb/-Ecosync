@@ -29,7 +29,7 @@ const CauseExplorer = ({ weather, aqi }) => {
                 <h3 className="text-xs font-bold text-gray-400 uppercase">Pollution Cause Explorer</h3>
             </div>
 
-            <div className="flex-1 bg-gradient-to-br from-pink-900/20 to-purple-900/20 rounded p-3 border border-pink-500/20 flex flex-col justify-center">
+            <div className="flex-1 bg-gradient-to-br from-pink-900/20 to-cyan-900/20 rounded p-3 border border-pink-500/20 flex flex-col justify-center">
                 <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Main Driver</div>
                 <div className="text-lg font-bold text-white leading-none mb-1">{topDriver.name}</div>
                 <div className="text-xs text-gray-400">{topDriver.desc}</div>

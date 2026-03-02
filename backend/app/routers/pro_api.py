@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from datetime import datetime, timedelta
 import json
 import asyncio
 from typing import List
 from .. import models, database
 from ..services import external_apis
+import pytz
+
+def get_local_time():
+    local_tz = pytz.timezone('Asia/Kolkata')
+    return datetime.now(local_tz).replace(tzinfo=None)
 
 router = APIRouter(
     prefix="/api/pro",
@@ -37,7 +41,7 @@ def build_normalized_response(lat, lon, city, weather_data, aq_data, sources):
         aqi_est = aq["pm25"] * 2 # Crude approx
         
     return {
-        "ts": int(datetime.utcnow().timestamp()),
+        "ts": int(get_local_time().timestamp()),
         "location": {
             "lat": lat,
             "lon": lon,
@@ -147,7 +151,7 @@ async def get_pro_current(
 
     # 1. Check Cache (DB)
     loc_key = f"{lat:.4f},{lon:.4f}"
-    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    cutoff = get_local_time() - timedelta(minutes=5)
     cached = db.query(models.APISnapshot).filter(
         models.APISnapshot.location == loc_key,
         models.APISnapshot.created_at > cutoff
@@ -166,8 +170,6 @@ async def get_pro_current(
             "wind": 0
         }
         aq_data = {
-            "pm25": cached.pm2_5,
-            "pm10": cached.pm10,
             "no2": cached.no2,
             "o3": cached.o3,
             "so2": cached.so2,
@@ -199,8 +201,7 @@ async def get_pro_current(
     if latest_reading:
         local_data = {
             "temp": latest_reading.temperature,
-            "humidity": latest_reading.humidity,
-            "pm25": latest_reading.pm2_5
+            "humidity": latest_reading.humidity
         }
     
     # AI ANALYSIS (Gemini)
@@ -223,7 +224,6 @@ async def get_pro_current(
     fused_state = {
         "temperature": {"local": local_data.get("temp"), "external": safe_temp, "fused": safe_temp},
         "humidity": {"local": local_data.get("humidity"), "external": safe_hum, "fused": safe_hum},
-        "air_quality": {"local": local_data.get("pm25"), "external": safe_aqi, "fused": safe_aqi},
         "precautions": precautions # From Gemini
     }
 
@@ -242,7 +242,7 @@ async def get_pro_forecast(lat: float, lon: float):
     import httpx
     
     weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,relativehumidity_2m,precipitation_probability&timezone=auto"
-    aqi_url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&hourly=pm10,pm2_5,us_aqi&timezone=auto"
+    aqi_url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&hourly=us_aqi&timezone=auto"
     
     async with httpx.AsyncClient() as client:
         try:
@@ -275,7 +275,7 @@ async def get_pro_history(lat: float, lon: float, hours: int = 24, db: Session =
     # Let's try exact string match on first 4 decimals as used in cache
     loc_key = f"{lat:.4f},{lon:.4f}"
     
-    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    cutoff = get_local_time() - timedelta(hours=hours)
     
     history = db.query(models.APISnapshot).filter(
         models.APISnapshot.location == loc_key,
@@ -411,7 +411,7 @@ def save_user_layout(layout: schemas.UserLayoutUpdate, db: Session = Depends(get
     db_layout = db.query(models.UserLayout).filter(models.UserLayout.user_id == current_user.id).first()
     if db_layout:
         db_layout.layout_json = layout.layout_json
-        db_layout.updated_at = datetime.utcnow()
+        db_layout.updated_at = get_local_time()
     else:
         db_layout = models.UserLayout(
             user_id=current_user.id,

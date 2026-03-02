@@ -63,13 +63,9 @@ class SensorDataCreate(BaseModel):
     device_id: str
     temperature: float
     humidity: float
-    pm25: float = 0.0
-    pressure: float = 1013.0
-    mq_raw: float = 0.0
     gas: float = 0.0
     rain: float = 4095.0
     motion: int = 0
-    wind_speed: float = 0.0
     user_email: Optional[str] = None
     lat: Optional[float] = None
     lon: Optional[float] = None
@@ -80,19 +76,13 @@ class SensorDataResponse(BaseModel):
     timestamp: datetime
     temperature: float
     humidity: float
-    pm25: float
-    pressure: float
-    mq_raw: float
     gas: float
     rain: float
     motion: int
-    wind_speed: float
     user_email: Optional[str] = None
     lat: Optional[float] = None
     lon: Optional[float] = None
     
-    # Smart Metrics
-    ph: Optional[float] = None
     trust_score: Optional[float] = None
     anomaly_label: Optional[str] = "Normal"
     smart_insight: Optional[str] = None
@@ -110,8 +100,6 @@ class AlertSettingsCreate(BaseModel):
     temp_threshold: float = 45.0
     humidity_min: float = 20.0
     humidity_max: float = 80.0
-    pm25_threshold: float = 150.0
-    wind_threshold: float = 30.0
     gas_threshold: float = 600.0
     rain_alert: bool = True
     motion_alert: bool = True
@@ -123,14 +111,12 @@ class AlertSettingsResponse(BaseModel):
     temp_threshold: float
     humidity_min: float
     humidity_max: float
-    pm25_threshold: float
-    wind_threshold: float
     gas_threshold: float
     rain_alert: bool
     motion_alert: bool
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -188,3 +174,19 @@ class UserLayoutResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class MLLogCreate(BaseModel):
+    anomaly_score: Optional[float] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+
+class MLLogResponse(BaseModel):
+    id: int
+    anomaly_score: Optional[float] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+

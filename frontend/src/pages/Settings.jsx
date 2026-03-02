@@ -46,7 +46,7 @@ const Settings = () => {
                 </div>
                 <div className="text-right">
                     <div className="text-xs font-mono text-slate-500 mb-1">CURRENT PLAN</div>
-                    <div className={`text-xl font-bold ${localStorage.getItem('plan') === 'pro' ? 'text-purple-400' : 'text-cyan-400'}`}>
+                    <div className={`text-xl font-bold ${localStorage.getItem('plan') === 'pro' ? 'text-cyan-400' : 'text-cyan-400'}`}>
                         {localStorage.getItem('plan') === 'pro' ? 'PRO LICENSE' : 'LITE LICENSE'}
                     </div>
                     {localStorage.getItem('plan') !== 'pro' && (
@@ -87,13 +87,13 @@ const Settings = () => {
                             <div className="group">
                                 <label className="flex justify-between text-xs font-mono text-slate-400 mb-2">
                                     <span>VIBRATION SENSITIVITY (G-Force)</span>
-                                    <span className="text-purple-400 font-bold">{config.VIBRATION_MAX}g</span>
+                                    <span className="text-cyan-400 font-bold">{config.VIBRATION_MAX}g</span>
                                 </label>
                                 <input
                                     type="range" min="0.1" max="20" step="0.1"
                                     value={config.VIBRATION_MAX}
                                     onChange={(e) => handleChange('VIBRATION_MAX', e.target.value)}
-                                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                                 />
                             </div>
 
@@ -207,3 +207,4 @@ const Toggle = ({ checked, onChange }) => (
 );
 
 export default Settings;
+// <title> <meta name="description" /> <meta property="og:title" />

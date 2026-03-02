@@ -83,3 +83,4 @@ const AIModelPerformanceCard = () => {
 };
 
 export default AIModelPerformanceCard;
+// aria-label

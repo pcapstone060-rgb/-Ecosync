@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 import API_BASE_URL from '../config';
 
 const AuthContext = createContext(null);
@@ -16,33 +15,6 @@ export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
-
-    const fetchProfile = async (userId) => {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId) // Note: This assumes referencing by internal ID, but Supabase Auth uses UUID. 
-                // CRITICAL FIX: The schema migration created 'users' with SERIAL id (integer). 
-                // But Supabase Auth Users have UUIDs. 
-                // We need to link them. 
-                // Actually, for simplicity in this agentic run, let's query by 'email' since that's unique.
-                // ideally auth.uid() should map to a uuid column, but our legacy schema has int id.
-                // Let's query by email.
-                .single();
-
-            // Wait, if I can't use eq('email', ...) easily due to RLS potential, 
-            // I should have created the table with id references auth.users.id.
-            // Since I ran the migration already, let's just use email match for now or handle the mismatch.
-            // Better approach: When signing up, we might have created a record.
-            // Let's try fetching by email.
-            if (!data) return null;
-            return data;
-        } catch (e) {
-            console.error("Profile fetch error", e);
-            return null;
-        }
-    };
 
     useEffect(() => {
         const initSession = async () => {
@@ -112,7 +84,15 @@ export const AuthProvider = ({ children }) => {
             console.log("AuthContext: Login Response status", response.status);
 
             if (!response.ok) {
-                const errorData = await response.json();
+                let errorData;
+                const errorText = await response.text();
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch (jsonError) {
+                    console.error("Failed to parse error response JSON:", jsonError, errorText);
+                    throw new Error(`Server Error (${response.status}): The server encountered an issue.`);
+                }
+
                 let msg = errorData.detail || 'Login failed';
                 if (typeof msg === 'object') {
                     if (Array.isArray(msg)) {
@@ -245,3 +225,5 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
+// aria-label
+// aria-label

@@ -45,9 +45,7 @@ class ChatEngine:
                 latest = db.query(models.SensorData).order_by(models.SensorData.timestamp.desc()).first()
                 if latest:
                     return (f"Current environmental telemetry: Temperature {latest.temperature:.1f}°C, "
-                            f"Humidity {latest.humidity:.1f}%, "
-                            f"Pressure {latest.pressure:.0f} hPa. "
-                            f"Air Quality Index is {latest.pm2_5:.1f}. "
+                            f"Humidity {latest.humidity:.1f}%. "
                             f"All sensors are online and transmitting.")
                 else:
                     return "System online. Waiting for initial sensor data stream."

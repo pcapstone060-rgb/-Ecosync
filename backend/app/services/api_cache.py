@@ -7,6 +7,11 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 import random
+import pytz
+
+def get_local_time():
+    local_tz = pytz.timezone('Asia/Kolkata')
+    return datetime.now(local_tz).replace(tzinfo=None)
 
 class APICache:
     def __init__(self, ttl_seconds: int = 60):
@@ -18,7 +23,7 @@ class APICache:
         """Get cached value if not expired."""
         if key not in self._cache:
             return None
-        if datetime.utcnow() - self._timestamps[key] > self.ttl:
+        if get_local_time() - self._timestamps[key] > self.ttl:
             del self._cache[key]
             del self._timestamps[key]
             return None
@@ -27,7 +32,7 @@ class APICache:
     def set(self, key: str, value: Any):
         """Set a cached value with timestamp."""
         self._cache[key] = value
-        self._timestamps[key] = datetime.utcnow()
+        self._timestamps[key] = get_local_time()
     
     def clear(self):
         """Clear all cache."""
@@ -92,7 +97,7 @@ def generate_realtime_markers(count: int = 15):
             "aqi": aqi,
             "status": status,
             "color": color,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": get_local_time().isoformat()
         })
     
     return markers
@@ -103,7 +108,7 @@ async def refresh_map_cache():
         try:
             markers = generate_realtime_markers(15)
             map_data_cache.set("india_markers", markers)
-            print(f"[Cache] Refreshed {len(markers)} markers at {datetime.utcnow()}")
+            print(f"[Cache] Refreshed {len(markers)} markers at {get_local_time()}")
         except Exception as e:
             print(f"[Cache] Refresh Error: {e}")
         await asyncio.sleep(30)  # Refresh every 30 seconds

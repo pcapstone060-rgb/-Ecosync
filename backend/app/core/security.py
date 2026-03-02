@@ -2,6 +2,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
 from passlib.context import CryptContext
+import pytz
+
+def get_local_time():
+    local_tz = pytz.timezone('Asia/Kolkata')
+    return datetime.now(local_tz).replace(tzinfo=None)
 
 # Secret key for JWT encoding/decoding
 SECRET_KEY = "super_secret_key_change_this_in_production"
@@ -30,9 +35,9 @@ def get_password_hash(password):
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = get_local_time() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = get_local_time() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

@@ -4,16 +4,22 @@ import os
 from datetime import datetime as dt, timedelta, datetime
 from typing import List, Optional, Dict
 import math
+import pytz
 
-# Global State for Alerts
+def get_local_time():
+    local_tz = pytz.timezone('Asia/Kolkata')
+    return dt.now(local_tz).replace(tzinfo=None)
+
+# Global State for Alerts and Demo
 alert_cooldowns = {}
+DEMO_MODE = False
 
 # Persistent Alert Logger
 ALERT_LOG_FILE = os.path.join(os.path.dirname(__file__), "alert_system.log")
 def log_alert_activity(message: str):
     try:
         with open(ALERT_LOG_FILE, "a", encoding="utf-8") as f:
-            ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+            ts = get_local_time().strftime("%Y-%m-%d %H:%M:%S")
             f.write(f"[{ts}] {message}\n")
     except: pass
 
@@ -72,10 +78,9 @@ app = FastAPI(
     version="2.0.0"
 )
 
-@app.get("/")
 @app.get("/health")
 def health_check():
-    return {"status": "active", "service": "IoT Backend", "timestamp": dt.utcnow()}
+    return {"status": "active", "service": "IoT Backend", "timestamp": get_local_time()}
 
 # --- Database Initialization & Startup Tasks ---
 @app.on_event("startup")
@@ -83,7 +88,8 @@ async def startup_event():
     """Unified startup handler for database initialization and background services"""
     try:
         # 1. Database Schema
-        models.Base.metadata.create_all(bind=database.engine)
+        # Disabled for Neon serverless deployment to prevent pg_catalog hang
+        # models.Base.metadata.create_all(bind=database.engine)
         
         # 2. Admin Seeding
         admin_setup.create_admin_user()
@@ -228,14 +234,14 @@ async def poll_devices():
                             # Re-fetch dev in this session to update
                             dev = db.query(models.Device).get(dev_id)
                             if dev:
-                                dev.last_seen = dt.utcnow()
+                                dev.last_seen = get_local_time()
                                 dev.status = data.get("status", "offline")
                                 
                                 metrics = data.get("metrics", {})
                                 if metrics:
                                     measurement = models.SensorData(
                                         device_id=dev.id,
-                                        timestamp=dt.utcnow(),
+                                        timestamp=get_local_time(),
                                         temperature=metrics.get("temperatureC"),
                                         humidity=metrics.get("humidityPct"),
                                         pressure=metrics.get("pressureHPa"),
@@ -363,10 +369,9 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 def check_alerts(db: Session, device: models.Device, measurement: models.SensorData, user_email: Optional[str] = None):
     """Rule-based alerting with Email Notification (Checks ALL active user settings)"""
     
-    current_ts = dt.utcnow()
+    current_ts = get_local_time()
     temp = float(measurement.temperature) if measurement.temperature is not None else 0.0
     hum = float(measurement.humidity) if measurement.humidity is not None else 0.0
-    pm25 = float(measurement.pm2_5) if measurement.pm2_5 is not None else 0.0
     gas = float(measurement.gas) if measurement.gas is not None else 0.0
     rain = float(measurement.rain) if measurement.rain is not None else 4095.0
     
@@ -519,6 +524,14 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
 
 # --- Alert Debug Endpoints ---
 
+@app.post("/api/debug/toggle-demo-mode", tags=["Debug"])
+def toggle_demo_mode():
+    """Toggles Demo Mode to simulate abnormal sensor data."""
+    global DEMO_MODE
+    DEMO_MODE = not DEMO_MODE
+    log_alert_activity(f"🔄 Demo Mode changed to {DEMO_MODE}")
+    return {"demo_mode": DEMO_MODE, "message": f"Demo mode is now {'ON' if DEMO_MODE else 'OFF'}"}
+
 @app.post("/api/debug/reset-cooldowns", tags=["Debug"])
 def reset_alert_cooldowns():
     """Clears the in-memory alert cooldown dict so alerts can fire immediately."""
@@ -530,7 +543,7 @@ def reset_alert_cooldowns():
 @app.get("/api/debug/cooldown-status", tags=["Debug"])
 def get_cooldown_status():
     """Shows current cooldown state for all devices."""
-    now = dt.utcnow()
+    now = get_local_time()
     status = {}
     for key, last_sent in alert_cooldowns.items():
         elapsed = (now - last_sent).total_seconds() / 60
@@ -612,7 +625,6 @@ def verify_compliance_task(report: ViolationReport, db: Session = Depends(get_db
 class IoTSensorData(BaseModel):
     temperature: Optional[float] = None
     humidity: Optional[float] = None
-    pm25: float = 0.0
     pressure: float = 1013.0
     mq_raw: float = 0.0
     wind_speed: float = 0.0
@@ -632,7 +644,16 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
     """Receives data from ESP32, applies Kalman filter, checks anomalies and alerts."""
     log_alert_activity(f"RECEIVE_IOT_DATA ENTRY - Email: {data.user_email}")
     try:
-        current_ts = dt.utcnow()
+        current_ts = get_local_time()
+        
+        # DEMO MODE MUTATION
+        global DEMO_MODE
+        if DEMO_MODE:
+            import random
+            data.temperature = (data.temperature or 25.0) + random.uniform(20.0, 30.0)
+            data.humidity = max((data.humidity or 50.0) - random.uniform(30.0, 40.0), 0)
+            data.gas = (data.gas or 400.0) + random.uniform(1500.0, 3000.0)
+            data.mq_raw = data.mq_raw + random.uniform(500.0, 1000.0)
         
         # 1. Kalman Filtering & Cleaning
         temp_val = data.temperature if data.temperature is not None else 0.0
@@ -640,25 +661,18 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
         
         filtered_temp, temp_conf = kf_instance.filter_temperature(temp_val)
         filtered_hum, hum_conf = kf_instance.filter_humidity(hum_val)
-        filtered_pm25, pm25_conf = kf_instance.filter_pm25(data.pm25)
         mq_cleaned = kf_instance.clean_mq_data(data.mq_raw)
 
         # 1b. Trust Score & Anomaly Detection
         current_data = {
             "temperature": filtered_temp,
             "humidity": filtered_hum,
-            "pm2_5": filtered_pm25,
-            "pressure": data.pressure,
-            "wind_speed": data.wind_speed,
-            "uv_index": 0, # Placeholder
-            "vibration": 0, # Placeholder
-            "ph": data.ph,
             "gas": data.gas or mq_cleaned["smoothed"]
         }
         
         trust_score = trust_calculator.calculate_score(current_data)
         is_anomaly, anomaly_score = anomaly_detector.update_and_predict([
-            filtered_temp, data.pressure, 0, data.wind_speed, 0, 0, 0, filtered_pm25, 0, 0, 0
+            filtered_temp, filtered_hum, current_data["gas"]
         ])
         
         anomalies_list, precautions = anomaly_detector.check_thresholds(current_data)
@@ -710,8 +724,7 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
             {
                 "temperature": data.temperature,
                 "gas": data.mq_raw, # Using mq_raw as gas proxy
-                "humidity": data.humidity,
-                "ph": data.ph
+                "humidity": data.humidity
             },
             anomalies_list
         )
@@ -720,8 +733,7 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
         anomaly_score = smart_report.get("if_score", 0.0)
         trust_score = trust_calculator.calculate_score({
             "temperature": data.temperature,
-            "humidity": data.humidity,
-            "pm2_5": filtered_pm25,
+            "humidity": data.humidity
         })
 
         # 3. Store Filtered Data with proper transaction handling
@@ -733,15 +745,9 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                 timestamp=current_ts,
                 temperature=float(filtered_temp),
                 humidity=float(filtered_hum),
-                pressure=float(data.pressure),
-                wind_speed=float(data.wind_speed),
-                pm2_5=float(filtered_pm25),
-                pm10=float(mq_cleaned["z_score"]), # Using z-score for now
-                mq_raw=float(data.mq_raw),
                 gas=float(data.gas) if data.gas is not None else float(mq_cleaned["smoothed"]),
                 rain=float(data.rain),
                 motion=int(data.motion),
-                ph=float(data.ph),
                 trust_score=float(trust_score),
                 anomaly_label=",".join(anomalies_list) if anomalies_list else "Normal",
                 anomaly_score=float(anomaly_score),
@@ -776,35 +782,27 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                     "raw": {
                         "temperature": data.temperature,
                         "humidity": data.humidity,
-                        "pm25": data.pm25,
                         "mq_raw": data.mq_raw
                     },
                     "filtered": {
                         "temperature": round(filtered_temp, 2),
                         "humidity": round(filtered_hum, 2),
-                        "pm25": round(filtered_pm25, 2),
                         "mq_smoothed": mq_cleaned["smoothed"]
                     },
                     "confidence": {
                         "temperature": round(temp_conf, 3),
-                        "humidity": round(hum_conf, 3),
-                        "pm25": round(pm25_conf, 3)
+                        "humidity": round(hum_conf, 3)
                     },
                     "mq_quality": {
                         "is_outlier": mq_cleaned["is_outlier"],
                         "z_score": mq_cleaned["z_score"]
                     },
                     "mq_index": mq_norm,
-                    "pressure": data.pressure,
-                    "mq_index": mq_norm,
-                    "pressure": data.pressure,
-                    "wind_speed": data.wind_speed,
                     "smart_metrics": {
                         "trust_score": round(trust_score, 1),
                         "is_anomaly": is_anomaly,
                         "anomaly_score": round(anomaly_score, 3),
-                        "insight": smart_insight,
-                        "ph": data.ph
+                        "insight": smart_insight
                     }
                 }
                 await manager.broadcast(payload, "ESP32_MAIN")
@@ -840,7 +838,7 @@ def get_historical_context(user_email: Optional[str] = None, db: Session = Depen
     Returns AI historical context: same-time last week readings, 7-day averages,
     and a generated narrative comparing current vs historical conditions.
     """
-    now = dt.utcnow()
+    now = get_local_time()
     
     # Build device filter
     device_id = None

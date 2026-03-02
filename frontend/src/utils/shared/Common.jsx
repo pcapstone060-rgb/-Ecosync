@@ -62,3 +62,4 @@ export const StatRow = ({ label, value, unit, subValue, trend }) => (
         </div>
     </div>
 );
+// aria-label

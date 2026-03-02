@@ -264,3 +264,5 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+// <title> <meta name="description" /> <meta property="og:title" />
+// <label>

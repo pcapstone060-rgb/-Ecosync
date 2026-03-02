@@ -114,3 +114,4 @@ const Badge = ({ children }) => (
 );
 
 export default AIAnalysisCard;
+// aria-label

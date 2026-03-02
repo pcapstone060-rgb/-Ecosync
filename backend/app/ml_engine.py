@@ -55,9 +55,9 @@ class AdaptiveKalmanFilter:
 
 class Preprocessor:
     def __init__(self):
-        # [temp, pressure, vibration, wind, uv, soil_temp, soil_moist, pm25, pm10, no2, solar]
-        self.min_vals = [-10.0, 900.0, 0.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.max_vals = [100.0, 1100.0, 20.0, 150.0, 15.0, 60.0, 1.0, 500.0, 500.0, 200.0, 1500.0]
+        # [temp, humidity, gas]
+        self.min_vals = [-10.0, 0.0, 0.0]
+        self.max_vals = [100.0, 100.0, 10000.0]
 
     def scale(self, features):
         scaled = []
@@ -82,7 +82,6 @@ class TrustScoreCalculator:
         # 1. Physics Range Check
         if not (-50 <= reading.get('temperature', 0) <= 100): score -= 30
         if not (0 <= reading.get('humidity', 0) <= 100): score -= 20
-        if reading.get('pm2_5', 0) < 0: score -= 20
         
         # 2. Stability Check (Simulated for single reading)
         if len(self.history) > 5:
@@ -291,17 +290,14 @@ class IsolationForestAnomalyDetector:
         )
         self.scaler = StandardScaler()
         self.is_trained = False
-        self.features = ['temperature', 'humidity', 'gas', 'pm2_5']
+        self.features = ['temperature', 'humidity', 'gas']
 
     def _extract_features(self, data: Dict) -> np.ndarray:
         """Extracts and orders features for model input."""
-        # Map pm25 to pm2_5 for consistency with DB models if needed
-        pm25_val = data.get('pm25') or data.get('pm2_5') or 0.0
         row = [
             data.get('temperature', 0.0),
             data.get('humidity', 0.0),
-            data.get('gas', 0.0),
-            pm25_val
+            data.get('gas', 0.0)
         ]
         return np.array(row).reshape(1, -1)
 
@@ -314,13 +310,10 @@ class IsolationForestAnomalyDetector:
         try:
             X = []
             for entry in historical_data:
-                # Handle pm2_5/pm25 key discrepancy
-                pm25 = entry.get('pm2_5') if entry.get('pm2_5') is not None else entry.get('pm25', 0.0)
                 X.append([
                     entry.get('temperature', 0.0),
                     entry.get('humidity', 0.0),
-                    entry.get('gas', 0.0),
-                    pm25
+                    entry.get('gas', 0.0)
                 ])
             
             X_array = np.array(X)
@@ -376,8 +369,7 @@ def load_historical_data(limit: int = 1000) -> List[Dict]:
             {
                 "temperature": r.temperature,
                 "humidity": r.humidity,
-                "gas": r.gas,
-                "pm2_5": r.pm2_5
+                "gas": r.gas
             } for r in records
         ]
     except Exception as e:
@@ -420,63 +412,25 @@ class IoTAnomalyDetector:
             alerts.append(f"Temperature Low (< {self.config['TEMP_MIN']}°C)")
             precautions.append("Ensure thermal insulation is active.")
 
-        # Vibration
-        if data['vibration'] > self.config['VIBRATION_MAX']:
-            alerts.append(f"Vibration Critical (> {self.config['VIBRATION_MAX']})")
-            precautions.append("Inspect mounting integrity immediately.")
-            precautions.append("Possible bearing failure - schedule maintenance.")
-
-        # Pressure
-        if data['pressure'] < self.config['PRESSURE_MIN']:
-             alerts.append(f"Pressure Drop (< {self.config['PRESSURE_MIN']}hPa)")
-             precautions.append("Check for vacuum leaks or seal breaches.")
-
-        # Wind
-        if data.get('wind_speed', 0) > self.config['WIND_MAX']:
-            alerts.append(f"High Wind (> {self.config['WIND_MAX']}km/h)")
-            precautions.append("Secure loose outdoor equipment.")
-            precautions.append("Halt crane/aerial operations.")
-
-        # UV
-        if data.get('uv_index', 0) > self.config['UV_MAX']:
-            alerts.append(f"Extreme UV (> {self.config['UV_MAX']})")
-            precautions.append("Wear UV-protective gear and eye protection.")
-            precautions.append("Limit exposure to < 10 minutes.")
-
-        # Air Quality
-        if data.get('pm2_5', 0) > self.config['PM25_MAX']:
-            alerts.append(f"Hazardous Air Quality (PM2.5 > {self.config['PM25_MAX']})")
-            precautions.append("Wear N95/N99 respirator masks.")
-            precautions.append("Activate air filtration systems immediately.")
-            
-        # pH 
-        if data.get('ph') is not None:
-             if data['ph'] < self.config.get('PH_MIN', 0):
-                  alerts.append(f"pH Critical Low (< {self.config.get('PH_MIN')})")
-                  precautions.append("Neutralize acid immediately.")
-             elif data['ph'] > self.config.get('PH_MAX', 14):
-                  alerts.append(f"pH Critical High (> {self.config.get('PH_MAX')})")
-                  precautions.append("Neutralize base immediately.")
-
         return alerts, precautions
 
     def update_and_predict(self, feature_vector):
         scaled_features = self.preprocessor.scale(feature_vector)
         self.buffer.append(scaled_features)
         
-        if len(self.buffer) > 20: # Use rolling window for simple anomaly detection
+        if len(self.buffer) > 20: 
             self.buffer.pop(0)
         
         if len(self.buffer) >= 10:
-            # Simple Z-score like anomaly detection for PM2.5 (feature index 7)
-            pm25_readings = [v[7] for v in self.buffer]
-            avg = sum(pm25_readings) / len(pm25_readings)
-            variance = sum((x - avg) ** 2 for x in pm25_readings) / len(pm25_readings)
+            # Simple Z-score like anomaly detection for Gas (now index 2)
+            gas_readings = [v[2] for v in self.buffer]
+            avg = sum(gas_readings) / len(gas_readings)
+            variance = sum((x - avg) ** 2 for x in gas_readings) / len(gas_readings)
             std_dev = math.sqrt(variance) if variance > 0 else 1.0
             
-            current_pm25 = scaled_features[7]
-            if abs(current_pm25 - avg) > 3 * std_dev:
-                return True, -1.0 # Anomaly detected
+            current_gas = scaled_features[2]
+            if abs(current_gas - avg) > 3 * std_dev:
+                return True, -1.0 
         
         return False, 0.0
 
@@ -589,31 +543,9 @@ def plot_roc_curve(y_true, scores, model_name="Isolation Forest"):
 # Dynamic AI Model Evaluation (Supabase Integration)
 # ====================================================
 
-def fetch_historical_data_from_supabase(limit=200):
-    """Fetches historical sensor data from Supabase cloud database."""
-    try:
-        from supabase import create_client, Client
-    except ImportError:
-        log_ml_activity("Supabase python client not installed.")
-        return []
-
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    
-    if not supabase_url or not supabase_key:
-        log_ml_activity("Supabase credentials not found in environment variables.")
-        return []
-        
-    try:
-        supabase: Client = create_client(supabase_url, supabase_key)
-        # Fetch latest records from sensor_data table (using pm2_5 instead of pm25 as per DB schema)
-        response = supabase.table("sensor_data").select("temperature,humidity,gas,pm2_5,timestamp").order('timestamp', desc=True).limit(limit).execute()
-        
-        log_ml_activity(f"Fetched {len(response.data)} records from Supabase.")
-        return response.data
-    except Exception as e:
-        log_ml_activity(f"Failed to fetch historical data from Supabase: {e}")
-        return []
+def fetch_historical_data_from_db(limit=200):
+    """Fetches historical sensor data from PostgreSQL using SQLAlchemy."""
+    return load_historical_data(limit=limit)
 
 def generate_ground_truth(data):
     """
@@ -625,17 +557,16 @@ def generate_ground_truth(data):
     """
     temp = float(data.get('temperature') or 0.0)
     gas = float(data.get('gas') or 0.0)
-    pm25 = float(data.get('pm25') or data.get('pm2_5') or 0.0)
     
-    if temp > 50 or gas > 2000 or pm25 > 150:
+    if temp > 50 or gas > 2000:
         return 1
     return 0
 
 def calculate_isolation_forest_performance():
     """
-    Compute model performance metrics for Isolation Forest using historical sensor data from Supabase.
+    Compute model performance metrics for Isolation Forest using historical sensor data from DB.
     """
-    data = fetch_historical_data_from_supabase(limit=200)
+    data = fetch_historical_data_from_db(limit=200)
     
     if not data:
         log_ml_activity("No historical data available for performance calculation.")
@@ -668,7 +599,7 @@ def calculate_isolation_forest_performance():
         if iso_val == -1:
             anomalies_detected += 1
             
-    log_ml_activity(f"Number of records fetched from Supabase: {len(data)}")
+    log_ml_activity(f"Number of records fetched from DB: {len(data)}")
     log_ml_activity(f"Number of anomalies detected: {anomalies_detected}")
             
     # Calculate metrics using ModelEvaluationEngine

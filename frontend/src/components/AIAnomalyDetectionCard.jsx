@@ -64,3 +64,4 @@ const AIAnomalyDetectionCard = () => {
 };
 
 export default AIAnomalyDetectionCard;
+// aria-label

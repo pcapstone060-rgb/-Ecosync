@@ -21,30 +21,13 @@ iso_model = IsolationForest(
 )
 is_model_trained = False
 
-def get_supabase_client():
-    try:
-        from supabase import create_client
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_KEY")
-        if not url or not key:
-            return None
-        return create_client(url, key)
-    except Exception as e:
-        logger.warning(f"Failed to init supabase: {e}")
-        return None
-
 def fetch_historical_data():
-    supabase = get_supabase_client()
-    if not supabase:
-        logger.warning("Supabase client not initialized. Generating synthetic data.")
-        return []
-
     try:
-        # Fetching required columns, order by timestamp descending
-        response = supabase.table("sensor_data").select("temperature,humidity,gas,pm2_5,pm25").order("timestamp", desc=True).limit(200).execute()
-        return response.data or []
+        from ..ml_engine import fetch_historical_data_from_db
+        raw = fetch_historical_data_from_db(limit=200)
+        return raw or []
     except Exception as e:
-        logger.error(f"Error fetching from Supabase: {e}")
+        logger.error(f"Error fetching from DB: {e}")
         return []
 
 def generate_synthetic_data(count):
@@ -65,8 +48,7 @@ def generate_synthetic_data(count):
         data.append({
             "temperature": temp,
             "humidity": hum,
-            "gas": gas,
-            "pm2_5": pm25
+            "gas": gas
         })
     return data
 
@@ -77,7 +59,7 @@ def get_ml_performance():
     # 1. Fetch Historical Data
     raw_data = fetch_historical_data()
     fetched_count = len(raw_data)
-    logger.info(f"Number of records fetched from Supabase: {fetched_count}")
+    logger.info(f"Number of records fetched from DB: {fetched_count}")
     
     if fetched_count < 20:
         logger.info("Insufficient data (<20 records). Generating synthetic demo data.")
@@ -92,13 +74,10 @@ def get_ml_performance():
         temp = float(row.get('temperature') or 0.0)
         hum = float(row.get('humidity') or 0.0)
         gas = float(row.get('gas') or 0.0)
-        # Handle both pm2_5 and pm25 keys gracefully 
-        pm25 = float(row.get('pm2_5') if row.get('pm2_5') is not None else (row.get('pm25') or 0.0))
-        
-        X.append([temp, hum, gas, pm25])
+        X.append([temp, hum, gas])
         
         # Ground truth mapping based on safety thresholds
-        if gas > 2000 or temp > 50 or pm25 > 150:
+        if gas > 2000 or temp > 50:
             y_true.append(1)
         else:
             y_true.append(0)

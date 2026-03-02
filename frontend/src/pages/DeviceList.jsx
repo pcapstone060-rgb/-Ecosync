@@ -202,12 +202,12 @@ const DeviceList = () => {
                                         <div className="bg-slate-950 border border-slate-800 rounded p-4 font-mono text-xs overflow-x-auto relative group">
                                             <div className="text-slate-500 mb-2">// WiFi & MQTT Configuration</div>
                                             <div className="space-y-1">
-                                                <p><span className="text-purple-400">const char*</span> ssid = <span className="text-green-400">"Wokwi-GUEST"</span>;</p>
-                                                <p><span className="text-purple-400">const char*</span> mqtt_server = <span className="text-green-400">"test.mosquitto.org"</span>;</p>
-                                                <p><span className="text-purple-400">const int</span> mqtt_port = <span className="text-cyan-400">1883</span>;</p>
+                                                <p><span className="text-cyan-400">const char*</span> ssid = <span className="text-green-400">"Wokwi-GUEST"</span>;</p>
+                                                <p><span className="text-cyan-400">const char*</span> mqtt_server = <span className="text-green-400">"test.mosquitto.org"</span>;</p>
+                                                <p><span className="text-cyan-400">const int</span> mqtt_port = <span className="text-cyan-400">1883</span>;</p>
                                                 <br />
                                                 <div className="text-slate-500">// Device Specific Topic</div>
-                                                <p><span className="text-purple-400">const char*</span> mqtt_topic = <span className="text-green-400">"devices/{createdDevice.id}/data"</span>;</p>
+                                                <p><span className="text-cyan-400">const char*</span> mqtt_topic = <span className="text-green-400">"devices/{createdDevice.id}/data"</span>;</p>
                                                 <br />
                                                 <div className="text-slate-500">// Payload Format</div>
                                                 <p className="text-slate-400">{"{"}</p>
@@ -235,3 +235,4 @@ const DeviceList = () => {
 };
 
 export default DeviceList;
+// <title> <meta name="description" /> <meta property="og:title" />

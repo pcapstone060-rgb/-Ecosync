@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../config/supabaseClient';
 
 
 // --- UTILITIES: KALMAN FILTER & CALIBRATION ---
@@ -290,27 +289,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                     baseline: smartData.baseline
                 };
 
-                // 1. Supabase Sync (Fire and Forget)
-                (async () => {
-                    try {
-                        const { error } = await supabase.from('sensor_readings').insert([
-                            {
-                                temperature: packet.temperature,
-                                raw_temperature: packet.raw_temperature,
-                                humidity: packet.humidity,
-                                raw_humidity: packet.raw_humidity,
-                                air_quality: packet.mq_ppm,
-                                raw_air_quality: packet.raw_mq_ppm,
-                                wind_speed: packet.wind_speed,
-                                raw_wind_speed: packet.raw_wind_speed,
-                                created_at: localTime
-                            }
-                        ]);
-                        if (error) console.error("Supabase Sync Error:", error.message);
-                    } catch (err) {
-                        console.error("Supabase Sync Fatal Error:", err);
-                    }
-                })();
+                // Supabase Sync removed as per migration to Neon DB
 
                 // Update Buffer
                 bufferRef.current = [...bufferRef.current, packet].slice(-50);
@@ -498,35 +477,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                             console.error("Serial Backend Alert Sync Error:", err);
                         }
 
-                        // 1. Supabase Sync (Serial Mode)
-                        (async () => {
-                            try {
-                                const { error } = await supabase.from('sensor_readings').insert([{
-                                    device_id: "ESP32-SERIAL",
-                                    created_at: new Date().toISOString(),
-                                    temperature: packet.temperature,
-                                    raw_temperature: packet.temp_raw,
-                                    humidity: packet.humidity,
-                                    raw_humidity: packet.hum_raw,
-
-                                    gas: packet.gas,              // Mapping Gas
-                                    raw_gas: packet.mq_raw,
-                                    motion: packet.motion,        // Mapping Motion
-                                    raw_motion: packet.motion,
-                                    trust_score: packet.trustScore
-                                }]);
-
-                                if (error) {
-                                    console.error("Supabase Sync Error:", error.message);
-                                    // Removed alert to prevent disrupting user experience
-                                } else {
-                                    // Success
-                                }
-                            } catch (err) {
-                                console.error("Supabase Sync Fatal Error:", err);
-                                // Removed fatal alert
-                            }
-                        })();
+                        // Supabase Sync (Serial Mode) removed
 
                         bufferRef.current = [...bufferRef.current, packet].slice(-50);
                         setStream(prev => ({
