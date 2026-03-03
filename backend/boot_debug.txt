@@ -72,3 +72,7 @@
 [2026-03-03 10:56:18.218515] ENGINE DIALECT: postgresql
 [2026-03-03 10:56:18.218525] ENGINE URL: postgresql://capstone_88st_user:***@dpg-d6j5qccr85hc73fqfbhg-a.oregon-postgres.render.com/capstone_88st
 >>>>>>> 321610b70b0f134640fe20e276be6a925ef53c41
+[2026-03-03 15:17:58.106765] !!! DATABASE.PY INITIALIZING !!!
+[2026-03-03 15:17:58.150907] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 15:17:58.346402] ENGINE DIALECT: sqlite
+[2026-03-03 15:17:58.346424] ENGINE URL: sqlite:///./dev_database.db
