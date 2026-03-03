@@ -8,7 +8,7 @@ const char *ssid = "YOUR_WIFI_NAME";
 const char *password = "YOUR_WIFI_PASSWORD";
 // REPLACE with your PC's IP address (Run 'ipconfig' in cmd to find it)
 // Example: "http://192.168.1.15:8009/iot/data"
-const char *serverUrl = "http://YOUR_PC_IP_ADDRESS:8009/iot/data";
+const char *serverUrl = "http://192.168.0.110:8001/iot/data";
 const char *userEmail =
     "sreekar092004@gmail.com"; // Must match your login email for Pro Mode
 

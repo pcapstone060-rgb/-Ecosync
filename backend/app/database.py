@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 with open("boot_debug.txt", "a") as f:
-    f.write(f"[{datetime.now()}] !!! DATABASE.PY INITIALIZING !!!\n")
+    f.write(f"[{datetime.now()}] !!! DATABASE.PY INITIALIZING (PID: {os.getpid()}) !!!\n")
 
 from dotenv import load_dotenv
 

@@ -2,58 +2,47 @@ import numpy as np
 
 class KalmanFilter:
     def __init__(self):
-        # Initialize Kalman filter parameters
-        self.x = np.zeros((2, 1))  # State estimate
-        self.P = np.eye(2)         # Covariance matrix
+        # Shared parameters
         self.F = np.array([[1, 1], [0, 1]])  # State transition matrix
         self.H = np.array([[1, 0]])          # Measurement matrix
         self.Q = np.eye(2) * 0.1             # Process noise covariance
         self.R = np.array([[0.1]])           # Measurement noise covariance
 
-    def filter_temperature(self, measurement):
-        """Apply Kalman filter to temperature data"""
+        # Separate states for different metrics
+        self.states = {
+            "temp": {"x": np.zeros((2, 1)), "P": np.eye(2)},
+            "hum":  {"x": np.zeros((2, 1)), "P": np.eye(2)},
+            "pm25": {"x": np.zeros((2, 1)), "P": np.eye(2)}
+        }
+
+    def _filter(self, key, measurement):
+        state = self.states[key]
+        x, P = state["x"], state["P"]
+
         # Prediction step
-        self.x = self.F @ self.x
-        self.P = self.F @ self.P @ self.F.T + self.Q
+        x = self.F @ x
+        P = self.F @ P @ self.F.T + self.Q
 
         # Update step
-        S = self.H @ self.P @ self.H.T + self.R
-        K = self.P @ self.H.T @ np.linalg.inv(S)
-        self.x = self.x + K @ (measurement - self.H @ self.x)
-        self.P = (np.eye(2) - K @ self.H) @ self.P
+        S = self.H @ P @ self.H.T + self.R
+        K = P @ self.H.T @ np.linalg.inv(S)
+        x = x + K @ (measurement - self.H @ x)
+        P = (np.eye(2) - K @ self.H) @ P
 
-        return float(self.x[0, 0]), float(np.sqrt(self.P[0, 0]))
+        # Save back
+        state["x"], state["P"] = x, P
+        return float(x[0, 0]), float(np.sqrt(P[0, 0]))
+
+    def filter_temperature(self, measurement):
+        return self._filter("temp", measurement)
 
     def filter_humidity(self, measurement):
-        """Apply Kalman filter to humidity data"""
-        # Prediction step
-        self.x = self.F @ self.x
-        self.P = self.F @ self.P @ self.F.T + self.Q
-
-        # Update step
-        S = self.H @ self.P @ self.H.T + self.R
-        K = self.P @ self.H.T @ np.linalg.inv(S)
-        self.x = self.x + K @ (measurement - self.H @ self.x)
-        self.P = (np.eye(2) - K @ self.H) @ self.P
-
-        return float(self.x[0, 0]), float(np.sqrt(self.P[0, 0]))
+        return self._filter("hum", measurement)
 
     def filter_pm25(self, measurement):
-        """Apply Kalman filter to PM2.5 data"""
-        # Prediction step
-        self.x = self.F @ self.x
-        self.P = self.F @ self.P @ self.F.T + self.Q
-
-        # Update step
-        S = self.H @ self.P @ self.H.T + self.R
-        K = self.P @ self.H.T @ np.linalg.inv(S)
-        self.x = self.x + K @ (measurement - self.H @ self.x)
-        self.P = (np.eye(2) - K @ self.H) @ self.P
-
-        return float(self.x[0, 0]), float(np.sqrt(self.P[0, 0]))
+        return self._filter("pm25", measurement)
 
     def clean_mq_data(self, raw_value):
-        """Clean and filter MQ gas sensor data"""
         # Simple moving average filter
         window_size = 5
         if not hasattr(self, 'mq_buffer'):

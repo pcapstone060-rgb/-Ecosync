@@ -10,8 +10,8 @@
 #define SERVER_URL "https://your-vercel-deployment.vercel.app/iot/data"
 #define MQTT_SERVER "your-vercel-deployment.vercel.app"
 #else
-#define SERVER_URL "http://your-local-ip:8009/iot/data"
-#define MQTT_SERVER "your-local-ip"
+#define SERVER_URL "http://192.168.0.110:8001/iot/data"
+#define MQTT_SERVER "192.168.0.110"
 #endif
 
 // MQTT Configuration

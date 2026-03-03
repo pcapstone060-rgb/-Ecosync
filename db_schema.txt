@@ -1,0 +1,1 @@
+[('user_id',), ('trust_score',), ('anomaly_score',), ('id',), ('timestamp',), ('temperature',), ('humidity',), ('gas',), ('rain',), ('motion',), ('device_id',), ('smart_insight',), ('anomaly_label',)]

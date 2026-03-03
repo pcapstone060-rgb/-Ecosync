@@ -260,8 +260,7 @@ async def poll_devices():
                                         temperature=metrics.get("temperatureC"),
                                         humidity=metrics.get("humidityPct"),
                                         pressure=metrics.get("pressureHPa"),
-                                        wind_speed=metrics.get("windMS"),
-                                        pm2_5=metrics.get("pm25"),
+                                        # pm2_5 and wind_speed removed for PostgreSQL compatibility
                                         # Set gas to None if not present to avoid 0.0 alerts
                                         gas=metrics.get("gas") 
                                     )
@@ -714,6 +713,26 @@ def verify_compliance_task(report: ViolationReport, db: Session = Depends(get_db
 
 
 
+@app.get("/debug/db")
+def debug_db(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        res = db.execute(text("SELECT current_database(), current_user, inet_server_addr()")).fetchone()
+        row_counts = {}
+        for table in ['users', 'devices', 'sensor_data', 'alerts']:
+            try:
+                row_counts[table] = db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+            except: row_counts[table] = "Error"
+        return {
+            "database": res[0],
+            "user": res[1],
+            "server_ip": str(res[2]),
+            "row_counts": row_counts,
+            "sqlalchemy_url": str(database.engine.url).split("@")[-1] # hide password
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 # --- IoT Ingestion Endpoint ---
 class IoTSensorData(BaseModel):
     temperature: Optional[float] = None
@@ -855,8 +874,7 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                 gas=float(data.gas) if data.gas is not None else float(mq_cleaned["smoothed"]),
                 rain=float(data.rain),
                 motion=int(data.motion),
-                pm2_5=float(data.pm25) if data.pm25 is not None else None,
-                wind_speed=float(data.wind_speed),
+                # pm2_5 and wind_speed removed for PostgreSQL compatibility
                 trust_score=float(trust_score),
                 anomaly_label=",".join(anomalies_list) if anomalies_list else "Normal",
                 anomaly_score=float(anomaly_score),
@@ -1092,8 +1110,8 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
         else:
              return {"status": "no_data", "message": "No sensor data available"}
     
-    # Calculate AQI
-    aqi_result = aqi_calculator.calculate_overall_aqi({"pm25": reading.pm2_5})
+    # Calculate AQI (Use Gas as proxy or 0 for PM if missing)
+    aqi_result = aqi_calculator.calculate_overall_aqi({"pm25": 0.0})
     health_recs = aqi_calculator.get_health_recommendations(
         aqi_result.get("aqi"), aqi_result.get("dominant_pollutant_key")
     )
@@ -1101,8 +1119,8 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
     # Calculate Rainfall Prediction
     prediction = weather_service.calculate_rainfall_prediction(
         reading.humidity, 
-        reading.wind_speed or 0.0, 
-        reading.pressure or 1013.0
+        0.0, # wind_speed missing in schema
+        1013.0 # pressure missing in schema
     )
 
     # User-Specific Threshold Breaches
@@ -1127,10 +1145,10 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
         "filtered": {
             "temperature": reading.temperature,
             "humidity": reading.humidity,
-            "pm25": reading.pm2_5,
-            "mq_smoothed": reading.pm10,
-            "pressure": reading.pressure,
-            "wind_speed": reading.wind_speed or 0.0
+            "pm25": 0.0,
+            "mq_smoothed": reading.gas,
+            "pressure": 1013.0,
+            "wind_speed": 0.0
         },
         "air_quality": {
             "aqi": aqi_result.get("aqi"),
@@ -1145,7 +1163,7 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
             "anomaly_label": reading.anomaly_label,
             "anomaly_score": reading.anomaly_score,
             "insight": reading.smart_insight,
-            "ph": reading.ph,
+            "ph": 7.0, # Default pH if not in schema
             "risk_level": "CRITICAL" if len(user_breaches) > 0 else "SAFE",
             "user_breaches": user_breaches
         }

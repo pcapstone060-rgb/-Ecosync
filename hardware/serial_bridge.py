@@ -18,8 +18,9 @@ import time
 import json
 
 # --- Configuration ---
-API_URL = "http://localhost:8000/iot/data"
+API_URL = "http://localhost:8001/iot/data"
 BAUD_RATE = 115200
+DEFAULT_USER_EMAIL = "sreekar092004@gmail.com"
 
 import serial.tools.list_ports
 
@@ -70,7 +71,8 @@ def main():
                                     "mq_raw": raw_json.get("mq_raw", raw_json.get("gas", 0.0)),
                                     "motion": raw_json.get("motion", 0),
                                     "screen": raw_json.get("screen", 0),
-                                    "rain": raw_json.get("rain", 0.0)
+                                    "rain": raw_json.get("rain", 0.0),
+                                    "user_email": raw_json.get("user_email", DEFAULT_USER_EMAIL)
                                 }
                                 
                                 # POST to Backend
