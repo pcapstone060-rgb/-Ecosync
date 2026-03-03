@@ -7,8 +7,8 @@ from datetime import datetime
 with open("boot_debug.txt", "a") as f:
     f.write(f"[{datetime.now()}] !!! DATABASE.PY INITIALIZING !!!\n")
 
-# ABSOLUTE HARDCODED FOR LOCAL BYPASS
-SQLALCHEMY_DATABASE_URL = "sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db"
+# Using environment variable with a fallback
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev_database.db")
 
 with open("boot_debug.txt", "a") as f:
     f.write(f"[{datetime.now()}] SQLALCHEMY_DATABASE_URL: {SQLALCHEMY_DATABASE_URL}\n")
