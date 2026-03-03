@@ -9,6 +9,8 @@ lsof -t -i :8000 | xargs kill -9 2>/dev/null
 echo "🔙 Starting Backend..."
 cd backend
 # Use nohup to keep it running if terminal closes, or just background it
+# Activate virtualenv first to ensure dependencies are found on Mac
+source venv/bin/activate
 python3 start.py &
 BACKEND_PID=$!
 cd ..

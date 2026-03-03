@@ -7,14 +7,21 @@ from datetime import datetime
 with open("boot_debug.txt", "a") as f:
     f.write(f"[{datetime.now()}] !!! DATABASE.PY INITIALIZING !!!\n")
 
-# Using environment variable with a fallback
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# First attempt to get the DATABASE_URL from .env
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev_database.db")
 
 with open("boot_debug.txt", "a") as f:
     f.write(f"[{datetime.now()}] SQLALCHEMY_DATABASE_URL: {SQLALCHEMY_DATABASE_URL}\n")
 
+# Use slightly different args depending on if it's sqlite or postgres
+connect_args = {"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args=connect_args
 )
 
 with open("boot_debug.txt", "a") as f:
