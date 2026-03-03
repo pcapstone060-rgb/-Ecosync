@@ -18,6 +18,7 @@
 [2026-03-02 23:17:45.013270] SQLALCHEMY_DATABASE_URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
 [2026-03-02 23:17:45.027895] ENGINE DIALECT: sqlite
 [2026-03-02 23:17:45.027909] ENGINE URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
+<<<<<<< HEAD
 [2026-03-02 23:47:27.698121] !!! DATABASE.PY INITIALIZING !!!
 [2026-03-02 23:47:27.698904] SQLALCHEMY_DATABASE_URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
 [2026-03-02 23:47:27.728607] ENGINE DIALECT: sqlite
@@ -26,3 +27,17 @@
 [2026-03-03 00:32:27.142481] SQLALCHEMY_DATABASE_URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
 [2026-03-03 00:32:27.368458] ENGINE DIALECT: sqlite
 [2026-03-03 00:32:27.368475] ENGINE URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
+=======
+[2026-03-03 11:39:32.358401] !!! DATABASE.PY INITIALIZING !!!
+[2026-03-03 11:39:32.359038] SQLALCHEMY_DATABASE_URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
+[2026-03-03 11:39:32.407162] ENGINE DIALECT: sqlite
+[2026-03-03 11:39:32.407181] ENGINE URL: sqlite:///c:/Users/sreek/OneDrive/Desktop/CP Project/Ecosync/backend/dev_database.db
+[2026-03-03 11:40:34.362977] !!! DATABASE.PY INITIALIZING !!!
+[2026-03-03 11:40:34.363335] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 11:40:34.384175] ENGINE DIALECT: sqlite
+[2026-03-03 11:40:34.384191] ENGINE URL: sqlite:///./dev_database.db
+[2026-03-03 11:40:53.636744] !!! DATABASE.PY INITIALIZING !!!
+[2026-03-03 11:40:53.637096] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 11:40:53.659939] ENGINE DIALECT: sqlite
+[2026-03-03 11:40:53.659956] ENGINE URL: sqlite:///./dev_database.db
+>>>>>>> 2335e81e14f3cf0b7214d616df443a7f990828a2

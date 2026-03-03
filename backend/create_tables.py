@@ -1,5 +1,9 @@
 from app.database import engine, Base
 from app import models
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def create_tables():
     print("Creating tables in database...")
