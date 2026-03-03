@@ -88,8 +88,8 @@ async def startup_event():
     """Unified startup handler for database initialization and background services"""
     try:
         # 1. Database Schema
-        # Disabled for Neon serverless deployment to prevent pg_catalog hang
-        # models.Base.metadata.create_all(bind=database.engine)
+        # Enabled for local SQLite
+        models.Base.metadata.create_all(bind=database.engine)
         
         # 2. Admin Seeding
         admin_setup.create_admin_user()
@@ -724,6 +724,7 @@ class IoTSensorData(BaseModel):
     rain: float = 0.0
     motion: int = 0
     gas: Optional[float] = None
+    pm25: Optional[float] = None
     user_email: Optional[str] = None
     lat: Optional[float] = None
     lon: Optional[float] = None
@@ -854,6 +855,8 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                 gas=float(data.gas) if data.gas is not None else float(mq_cleaned["smoothed"]),
                 rain=float(data.rain),
                 motion=int(data.motion),
+                pm2_5=float(data.pm25) if data.pm25 is not None else None,
+                wind_speed=float(data.wind_speed),
                 trust_score=float(trust_score),
                 anomaly_label=",".join(anomalies_list) if anomalies_list else "Normal",
                 anomaly_score=float(anomaly_score),

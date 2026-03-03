@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import LightDashboard from './LightDashboard';
-import ProDashboard from './ProDashboard';
 import API_BASE_URL from '../config';
 import LocationTestButton from '../components/LocationTestButton';
 import LocationPermissionPrompt from '../components/LocationPermissionPrompt';
@@ -11,14 +10,6 @@ import pushNotificationManager from '../utils/pushNotifications';
 
 const Dashboard = ({ initialView }) => {
     const { userProfile, currentUser } = useAuth();
-    const [isProMode, setIsProMode] = useState(false);
-
-    // Force Lite mode if accessing a specific dashboard view
-    useEffect(() => {
-        if (initialView && initialView !== 'overview') {
-            setIsProMode(false);
-        }
-    }, [initialView]);
 
     const [locationDone, setLocationDone] = useState(false);
     const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
@@ -98,16 +89,6 @@ const Dashboard = ({ initialView }) => {
         setShowNotificationPrompt(false);
     };
 
-    // Sync with User Profile
-    useEffect(() => {
-        if (userProfile?.plan === 'pro') {
-            setIsProMode(true);
-        }
-    }, [userProfile]);
-
-    const handleToggle = () => {
-        setIsProMode(prev => !prev);
-    };
 
     return (
         <>
@@ -129,9 +110,7 @@ const Dashboard = ({ initialView }) => {
                 />
             )}
 
-            {isProMode
-                ? <ProDashboard onToggle={handleToggle} />
-                : <LightDashboard onToggle={handleToggle} initialView={initialView} />}
+            <LightDashboard initialView={initialView} />
 
             {/* Manual Location Test Button */}
             <LocationTestButton userEmail={currentUser?.email} />

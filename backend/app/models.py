@@ -60,6 +60,8 @@ class SensorData(Base):
     gas = Column(Float, nullable=True)
     rain = Column(Float, nullable=True)
     motion = Column(Integer, nullable=True)
+    pm2_5 = Column(Float, nullable=True)
+    wind_speed = Column(Float, nullable=True)
     trust_score = Column(Float, nullable=True)
     anomaly_label = Column(String, nullable=True)
     anomaly_score = Column(Float, nullable=True)

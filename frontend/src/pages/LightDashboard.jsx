@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, Legend } from 'recharts';
-import { Bell, Wifi, Activity, Droplets, Thermometer, Wind, Zap, Map as MapIcon, Newspaper, User, Menu, X, Leaf, Shield, Cpu, ExternalLink, CloudRain, Brain, ShieldCheck, FlaskConical, AlertTriangle, Gauge, Info, Phone, Settings } from 'lucide-react';
+import { Bell, Wifi, Activity, Droplets, Thermometer, Wind, Zap, Map as MapIcon, Newspaper, User, Menu, X, Leaf, Shield, Cpu, CloudRain, Brain, ShieldCheck, AlertTriangle, Gauge, Info, Phone, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useEsp32Stream } from '../hooks/useEsp32Stream';
 import ComplianceLog from '../components/ComplianceLog';
@@ -22,7 +22,7 @@ import SettingsDialog from '../components/dashboard/shared/SettingsDialog';
 import AIModelPerformanceCard from '../components/AIModelPerformanceCard';
 import AIAnomalyDetectionCard from '../components/AIAnomalyDetectionCard';
 
-const LightDashboard = ({ onToggle, initialView = 'overview' }) => {
+const LightDashboard = ({ initialView = 'overview' }) => {
     const navigate = useNavigate();
     const { logout, userProfile, currentUser } = useAuth();
     // Pass user email to hook for backend alerting
@@ -378,10 +378,6 @@ const LightDashboard = ({ onToggle, initialView = 'overview' }) => {
                         </button>
                     ))}
                 </div>
-                <button onClick={onToggle} className="mt-auto mb-8 p-3 text-emerald-400 border border-emerald-500/30 rounded-xl w-[calc(100%-32px)] flex items-center gap-4 justify-center lg:justify-start px-4 hover:bg-emerald-500/10">
-                    <ExternalLink size={24} className="min-w-[24px]" />
-                    <span className="lg:opacity-0 lg:group-hover:opacity-100 font-bold whitespace-nowrap transition-opacity">SWITCH MODE</span>
-                </button>
             </aside>
 
             <div className="flex-1 flex flex-col h-full overflow-hidden relative">

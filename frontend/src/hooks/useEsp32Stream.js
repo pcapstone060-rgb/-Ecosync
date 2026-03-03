@@ -56,10 +56,8 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
     const bufferRef = useRef([]);
     const realBaseRef = useRef({ temp: 24, hum: 45, aqi: 12, loaded: false });
 
-    // 1. FETCH REAL BASELINE DATA (Every time coordinates change)
+    // 1. FETCH REAL BASELINE DATA (Every time coordinates change) — runs for ALL modes
     useEffect(() => {
-        if (mode !== 'pro') return;
-
         const fetchRealEnv = async () => {
             try {
                 const [lat, lon] = coordinates;
@@ -104,7 +102,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
         const fetchData = async () => {
             try {
                 if (mode === 'lite' || mode === 'light') {
-                    // LIGHT MODE: If Serial is NOT connected, poll backend for demo/simulated data
+                    // LIGHT MODE: Poll backend for latest sensor data, then POST back to get AI smart metrics
                     if (health.status !== 'ONLINE') {
                         try {
                             const url = userEmail
@@ -114,7 +112,6 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                             if (response.ok) {
                                 const latest = await response.json();
                                 if (latest.status === 'no_data') {
-                                    // Reset state if no data — also clear history so old values don't show
                                     bufferRef.current = [];
                                     setStream(prev => ({
                                         ...prev,
@@ -142,32 +139,36 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                     }
                                 }
 
-                                // Fix: Access nested objects from API response
+                                // Access nested objects from API response
                                 const filtered = latest.filtered || {};
                                 const smart = latest.smart_metrics || {};
 
+                                // Use real satellite baseline if loaded, fall back to API values
+                                const base = realBaseRef.current;
                                 const now = Date.now();
+
                                 const packet = {
                                     ts: now,
                                     timestamp: latest.timestamp ? new Date(latest.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString(),
 
-                                    temperature: filtered.temperature,
+                                    temperature: filtered.temperature ?? (base.loaded ? base.temp : null),
                                     temp_raw: filtered.temperature,
 
-                                    humidity: filtered.humidity,
+                                    humidity: filtered.humidity ?? (base.loaded ? base.hum : null),
                                     hum_raw: filtered.humidity,
 
                                     gas: filtered.mq_smoothed,
                                     mq_raw: filtered.mq_smoothed,
 
                                     pm25: filtered.pm25,
+                                    wind_speed: base.loaded ? base.wind : null,
 
                                     motion: latest.motion !== undefined ? latest.motion : null,
                                     rain: latest.rain !== undefined ? latest.rain : null,
 
                                     trustScore: smart.trust_score,
                                     smart_metrics: {
-                                        insight: smart.insight || smart.smart_insight, // Handle inconsistent naming
+                                        insight: smart.insight || smart.smart_insight,
                                         anomaly_label: smart.anomaly_label,
                                         anomaly_score: smart.anomaly_score,
                                         trust_score: smart.trust_score,
@@ -178,10 +179,49 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                     }
                                 };
 
+                                // --- CLOUD SYNC: POST to /iot/data (same as Pro mode) ---
+                                try {
+                                    const iotResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/iot/data`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            temperature: packet.temperature,
+                                            humidity: packet.humidity,
+                                            pm25: packet.pm25 ?? 0,
+                                            mq_raw: packet.mq_raw ?? 0,
+                                            wind_speed: packet.wind_speed ?? 0,
+                                            rain: packet.rain ?? null,
+                                            motion: packet.motion ?? null,
+                                            user_email: userEmail,
+                                            lat: coordinates ? coordinates[0] : null,
+                                            lon: coordinates ? coordinates[1] : null
+                                        })
+                                    });
+
+                                    if (iotResponse.ok) {
+                                        const smartData = await iotResponse.json();
+                                        // Merge AI smart metrics from backend response
+                                        packet.trustScore = smartData.trust_score ?? packet.trustScore;
+                                        packet.smart_metrics = {
+                                            insight: smartData.smart_insight || packet.smart_metrics.insight,
+                                            anomaly_label: smartData.anomaly_label || packet.smart_metrics.anomaly_label || "Normal",
+                                            anomaly_score: smartData.anomaly_score ?? packet.smart_metrics.anomaly_score,
+                                            trust_score: smartData.trust_score ?? packet.smart_metrics.trust_score,
+                                            risk_level: smartData.risk_level || packet.smart_metrics.risk_level || "SAFE",
+                                            prediction: smartData.prediction || packet.smart_metrics.prediction,
+                                            sensor_health: smartData.sensor_health || packet.smart_metrics.sensor_health,
+                                            baseline: smartData.baseline || packet.smart_metrics.baseline,
+                                            user_breaches: smartData.user_breaches || []
+                                        };
+                                    }
+                                } catch (iotErr) {
+                                    console.warn("Lite Cloud Sync Error:", iotErr);
+                                }
+
                                 // Update Stream State
                                 bufferRef.current = [...bufferRef.current, packet].slice(-50);
                                 setStream({
-                                    connected: false, // Not physically connected
+                                    connected: false,
                                     lastSeen: now,
                                     data: packet,
                                     history: bufferRef.current,
@@ -189,123 +229,11 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                 });
                             }
                         } catch (e) {
-                            console.warn("Demo Data Poll Error:", e);
+                            console.warn("Lite Data Poll Error:", e);
                         }
                     }
-                    return; // Exit fetchData if in lite/light mode
+                    return; // Done with lite/light mode
                 }
-
-                // PRO MODE: Advanced Simulation + Real Data Wrapper
-                const now = Date.now();
-
-                // USE REAL BASELINE IF LOADED, ELSE MOCK
-                const base = realBaseRef.current;
-
-                // --- SENSOR SIMULATION ENGINE ---
-                // 1. HARWARE BIAS (Simulating Uncalibrated Sensors)
-                const BIAS = { temp: 2.1, hum: -4.5, aqi: 15, wind: 1.2 };
-
-                // Base Values (Ground Truth from API)
-                const truthTemp = base.loaded ? base.temp : (24 + Math.sin(now / 10000) * 2);
-                const truthHum = base.loaded ? base.hum : (45 + Math.sin(now / 20000) * 5);
-                const truthWind = base.loaded ? base.wind : (5 + Math.sin(now / 30000) * 2);
-                const truthAqi = base.loaded ? base.aqi : (12 + Math.cos(now / 15000) * 3);
-
-                // Raw Readings = Truth + Bias + Noise
-                const rawTemp = truthTemp + BIAS.temp + ((Math.random() - 0.5) * 0.5);
-                const rawHum = truthHum + BIAS.hum + ((Math.random() - 0.5) * 1.0);
-                const rawWind = truthWind + BIAS.wind + ((Math.random() - 0.5) * 0.8);
-                const rawAqi = truthAqi + BIAS.aqi + ((Math.random() - 0.5) * 2.0);
-
-                // 2. CALIBRATION (Software Correction)
-                const calTemp = rawTemp - BIAS.temp;
-                const calHum = rawHum - BIAS.hum;
-                const calWind = rawWind - BIAS.wind;
-                const calAqi = rawAqi - BIAS.aqi;
-
-                // 3. KALMAN FILTER (Noise Reduction)
-                const lastPacket = bufferRef.current[bufferRef.current.length - 1];
-
-                const filteredTemp = lastPacket ? (lastPacket.temperature * 0.85 + calTemp * 0.15) : calTemp;
-                const filteredHum = lastPacket ? (lastPacket.humidity * 0.85 + calHum * 0.15) : calHum;
-                const filteredWind = lastPacket ? (lastPacket.wind_speed * 0.85 + calWind * 0.15) : calWind;
-                const filteredAqi = lastPacket ? (lastPacket.pm25 * 0.85 + calAqi * 0.15) : calAqi;
-
-                const packet = {
-                    ts: now,
-                    timestamp: new Date().toLocaleTimeString(),
-                    temperature: Number(filteredTemp.toFixed(1)),
-                    raw_temperature: Number(rawTemp.toFixed(1)),
-                    humidity: Number(filteredHum.toFixed(1)),
-                    raw_humidity: Number(rawHum.toFixed(1)),
-                    mq_ppm: Number(filteredAqi.toFixed(0)),
-                    raw_mq_ppm: Number(rawAqi.toFixed(0)),
-                    mq_raw: 400 + Math.random() * 50,
-                    gas: Number(filteredAqi.toFixed(0)),
-                    wind_speed: Number(filteredWind.toFixed(1)),
-                    raw_wind_speed: Number(rawWind.toFixed(1)),
-                    trustScore: 99.9,
-                    deviceId: "ESP32_MAIN"
-                };
-
-                // --- CLOUD PERSISTENCE & ALERTS ---
-                const localTime = new Date(now - (new Date().getTimezoneOffset() * 60000)).toISOString();
-
-                let smartData = {};
-
-                // 2. Local Backend Alerts Sync (Await for Smart Data)
-                try {
-                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/iot/data`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            temperature: Number(filteredTemp.toFixed(2)),
-                            humidity: Number(filteredHum.toFixed(2)),
-                            pm25: Number(filteredAqi.toFixed(2)),
-                            mq_raw: packet.mq_raw,
-                            wind_speed: Number(filteredWind.toFixed(2)),
-                            user_email: userEmail,
-                            lat: coordinates[0],
-                            lon: coordinates[1]
-                        })
-                    });
-
-                    if (response.ok) {
-                        smartData = await response.json();
-                    }
-                } catch (err) {
-                    console.error("Backend Alert Sync Error:", err);
-                }
-
-                // Merge Smart Metrics
-                packet.trustScore = smartData.trust_score ?? 98.7; // Default fallback
-                packet.smart_metrics = {
-                    insight: smartData.smart_insight,
-                    anomaly_label: smartData.anomaly_label || "Normal",
-                    trust_score: smartData.trust_score,
-                    risk_level: smartData.risk_level || "SAFE",
-                    prediction: smartData.prediction,
-                    sensor_health: smartData.sensor_health,
-                    baseline: smartData.baseline
-                };
-
-                // Supabase Sync removed as per migration to Neon DB
-
-                // Update Buffer
-                bufferRef.current = [...bufferRef.current, packet].slice(-50);
-
-                setStream({
-                    connected: true,
-                    lastSeen: now,
-                    data: packet,
-                    history: bufferRef.current,
-                    alerts: []
-                });
-
-                setHealth({
-                    status: 'ONLINE',
-                    lastPacketTime: new Date()
-                });
 
             } catch (err) {
                 console.error("Stream Error:", err);
