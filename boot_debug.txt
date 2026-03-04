@@ -50,3 +50,7 @@
 [2026-03-04 12:28:41.684120] SQLALCHEMY_DATABASE_URL: postgresql://capstone_88_user:fMzaqkccbLxjcOVxJEkSYSjnuglLcWvL@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88
 [2026-03-04 12:28:41.734178] ENGINE DIALECT: postgresql
 [2026-03-04 12:28:41.734192] ENGINE URL: postgresql://capstone_88_user:***@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88
+[2026-03-04 19:31:36.218277] !!! DATABASE.PY INITIALIZING (PID: 6012) !!!
+[2026-03-04 19:31:36.333890] SQLALCHEMY_DATABASE_URL: postgresql://capstone_88_user:fMzaqkccbLxjcOVxJEkSYSjnuglLcWvL@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88
+[2026-03-04 19:31:37.347299] ENGINE DIALECT: postgresql
+[2026-03-04 19:31:37.347327] ENGINE URL: postgresql://capstone_88_user:***@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88

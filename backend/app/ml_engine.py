@@ -345,7 +345,7 @@ class IsolationForestAnomalyDetector:
             
             # Anomaly logic: Ensure it's not just a slight deviation.
             # Only trigger Anomaly if prediction is -1 AND the confidence score is a strong negative
-            label = "ANOMALY" if prediction == -1 and score < -0.05 else "NORMAL"
+            label = "ANOMALY" if prediction == -1 and score < -0.10 else "NORMAL"
             return label, float(score)
         except Exception as e:
             log_ml_activity(f"Prediction error: {e}")
@@ -391,10 +391,6 @@ class IoTAnomalyDetector:
             "TEMP_MIN": -10.0,
             "VIBRATION_MAX": 5.0,
             "PRESSURE_MIN": 900.0,
-            "WIND_MAX": 50.0,
-            "UV_MAX": 10.0,
-            "PM25_MAX": 150.0,
-            "NO2_MAX": 100.0,
             "PH_MIN": 1.0,
             "PH_MAX": 14.0
         }
@@ -413,8 +409,7 @@ class IoTAnomalyDetector:
                 "humidity_min": 20.0,
                 "humidity_max": 80.0,
                 "gas_threshold": 600.0,
-                "pm25_threshold": 150.0,
-                "wind_threshold": 30.0
+                "pm25_threshold": 150.0
             }
             
         t_max = user_config.get("temp_threshold") or 45.0
@@ -422,7 +417,6 @@ class IoTAnomalyDetector:
         h_max = user_config.get("humidity_max") or 80.0
         g_max = user_config.get("gas_threshold") or 600.0
         pm25_max = user_config.get("pm25_threshold") or 150.0
-        wind_max = user_config.get("wind_threshold") or 30.0
         
         # Temperature
         if data.get('temperature') is not None:
@@ -450,12 +444,6 @@ class IoTAnomalyDetector:
              if data['pm2_5'] > pm25_max:
                  alerts.append(f"PM2.5 High (> {pm25_max} µg/m³)")
                  precautions.append("Wear masks, turn on air purifiers immediately.")
-                 
-        # Wind Speed
-        if data.get('wind_speed') is not None:
-             if data['wind_speed'] > wind_max:
-                 alerts.append(f"High Wind Speed (> {wind_max} km/h)")
-                 precautions.append("Secure loose outdoor objects, stay clear of weak structures.")
 
         return alerts, precautions
 

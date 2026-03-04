@@ -103,7 +103,6 @@ class AlertSettingsCreate(BaseModel):
     gas_threshold: float = 600.0
     rain_alert: bool = True
     pm25_threshold: float = 150.0
-    wind_threshold: float = 30.0
     is_active: bool = True
 
 class AlertSettingsResponse(BaseModel):
@@ -115,7 +114,6 @@ class AlertSettingsResponse(BaseModel):
     gas_threshold: float
     rain_alert: bool
     pm25_threshold: float
-    wind_threshold: float
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

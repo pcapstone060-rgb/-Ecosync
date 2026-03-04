@@ -12,6 +12,7 @@ class KalmanFilter:
         self.states = {
             "temp": {"x": np.zeros((2, 1)), "P": np.eye(2)},
             "hum":  {"x": np.zeros((2, 1)), "P": np.eye(2)},
+            "gas":  {"x": np.zeros((2, 1)), "P": np.eye(2)},
             "pm25": {"x": np.zeros((2, 1)), "P": np.eye(2)}
         }
 
@@ -41,6 +42,9 @@ class KalmanFilter:
 
     def filter_pm25(self, measurement):
         return self._filter("pm25", measurement)
+
+    def filter_gas(self, measurement):
+        return self._filter("gas", measurement)
 
     def clean_mq_data(self, raw_value):
         # Simple moving average filter

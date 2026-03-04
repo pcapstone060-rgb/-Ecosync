@@ -763,6 +763,11 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
         
         filtered_temp, temp_conf = kf_instance.filter_temperature(temp_val)
         filtered_hum, hum_conf = kf_instance.filter_humidity(hum_val)
+        
+        # Smooth gas readings as well
+        gas_val = data.gas if data.gas is not None else data.mq_raw
+        filtered_gas, _ = kf_instance.filter_gas(gas_val)
+        
         mq_cleaned = kf_instance.clean_mq_data(data.mq_raw)
 
         # Fetch User's SPECIFIC Alert Thresholds
@@ -775,15 +780,14 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                      "humidity_min": settings_obj.humidity_min,
                      "humidity_max": settings_obj.humidity_max,
                      "gas_threshold": settings_obj.gas_threshold,
-                     "pm25_threshold": settings_obj.pm25_threshold,
-                     "wind_threshold": settings_obj.wind_threshold
+                     "pm25_threshold": settings_obj.pm25_threshold
                 }
                 
         # 1b. Trust Score & Anomaly Detection
         current_data = {
             "temperature": filtered_temp,
             "humidity": filtered_hum,
-            "gas": data.gas or mq_cleaned["smoothed"],
+            "gas": filtered_gas,
             "wind_speed": data.wind_speed,
             "pm2_5": data.pm25
         }
@@ -1141,10 +1145,6 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
             pm25_proxy = reading.gas or 0.0
             if pm25_proxy > (settings.pm25_threshold or 150.0):
                 user_breaches.append(f"Air Quality (PM2.5) exceeds your limit ({pm25_proxy} > {settings.pm25_threshold})")
-            
-            wind_proxy = 0.0 # Mock or replace if wind sensor is added
-            if wind_proxy > (settings.wind_threshold or 30.0) and wind_proxy > 0:
-                user_breaches.append(f"Wind Speed exceeds your limit ({wind_proxy} > {settings.wind_threshold})")
     
     return {
         "status": "ok",
@@ -1323,7 +1323,6 @@ def get_alert_settings(email: Optional[str] = None, db: Session = Depends(get_db
             gas_threshold=600.0,
             rain_alert=True,
             pm25_threshold=150.0,
-            wind_threshold=30.0,
             is_active=True
         )
         db.add(settings)

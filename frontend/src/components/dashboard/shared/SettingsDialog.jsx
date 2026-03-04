@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Bell, Shield, Moon, Wifi, Wind } from 'lucide-react';
+import { X, Bell, Shield, Moon, Wifi } from 'lucide-react';
 import API_BASE_URL from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -9,7 +9,6 @@ const SettingsDialog = ({ isOpen, onClose }) => {
     const [humMin, setHumMin] = React.useState(20);
     const [humMax, setHumMax] = React.useState(80);
     const [pm25Thresh, setPm25Thresh] = React.useState(150);
-    const [windThresh, setWindThresh] = React.useState(30);
     const [loading, setLoading] = React.useState(false);
     const [saved, setSaved] = React.useState(false);
 
@@ -28,7 +27,6 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                     if (data.humidity_min) setHumMin(data.humidity_min);
                     if (data.humidity_max) setHumMax(data.humidity_max);
                     if (data.pm25_threshold) setPm25Thresh(data.pm25_threshold);
-                    if (data.wind_threshold) setWindThresh(data.wind_threshold);
                 })
                 .catch(err => console.error("Failed to load settings:", err));
         }
@@ -47,7 +45,6 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                     humidity_min: parseFloat(humMin),
                     humidity_max: parseFloat(humMax),
                     pm25_threshold: parseFloat(pm25Thresh),
-                    wind_threshold: parseFloat(windThresh),
                     is_active: true
                 })
             });
@@ -132,17 +129,7 @@ const SettingsDialog = ({ isOpen, onClose }) => {
                             </div>
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-xs text-gray-400 font-bold flex items-center gap-1">
-                                <Wind size={12} className="text-blue-400" /> Max Wind Speed (km/h)
-                            </label>
-                            <input
-                                type="number"
-                                value={windThresh}
-                                onChange={(e) => setWindThresh(e.target.value)}
-                                className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm text-white focus:border-emerald-500 outline-none"
-                            />
-                        </div>
+
                     </div>
 
                     {/* Section 2 */}
