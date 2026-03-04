@@ -1,0 +1,25 @@
+# Environment
+.env
+.venv
+venv
+env
+__pycache__
+*.pyc
+
+# Dependencies
+node_modules
+dist
+build
+
+# Git
+.git
+.github
+.gitignore
+
+# Project specific
+backend/dev_database.db
+backend/ecosync.db
+*.log
+*.txt
+.pio
+.vscode
