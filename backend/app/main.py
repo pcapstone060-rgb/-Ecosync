@@ -382,7 +382,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return c * r
 
 
-def check_alerts(db: Session, device: models.Device, measurement: models.SensorData, user_email: Optional[str] = None):
+def check_alerts(db: Session, device: models.Device, measurement: models.SensorData, user_email: Optional[str] = None, extra_data: dict = None):
     """Rule-based alerting with Email Notification (User-Aware)"""
     
     current_ts = get_local_time()
@@ -429,22 +429,13 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
         T_MAX = settings.temp_threshold or 45.0
         H_MIN = settings.humidity_min or 20.0
         H_MAX = settings.humidity_max or 80.0
-        G_MAX = settings.gas_threshold or 2000.0
-        PM25_MAX = getattr(settings, 'pm25_threshold', 150.0) or 150.0
-        WIND_MAX = getattr(settings, 'wind_threshold', 30.0) or 30.0
+        G_MAX = settings.gas_threshold or 600.0
         
         breaches = []
         # Only check if the metric exists (Prevent 0.0 false alerts)
         if temp is not None and temp > T_MAX: breaches.append(f"Temperature Breach ({temp}°C > {T_MAX}°C)")
         if gas is not None and gas > G_MAX: breaches.append(f"Air Quality Breach ({gas} > {G_MAX})")
         if hum is not None and (hum > H_MAX or hum < H_MIN): breaches.append(f"Humidity Out of Range ({hum}%)")
-        
-        # Check newly added metrics if present in measurement
-        pm25 = float(measurement.pm2_5) if hasattr(measurement, 'pm2_5') and measurement.pm2_5 is not None else None
-        wind = float(measurement.wind_speed) if hasattr(measurement, 'wind_speed') and measurement.wind_speed is not None else None
-        
-        if pm25 is not None and pm25 > PM25_MAX: breaches.append(f"PM2.5 Breach ({pm25} > {PM25_MAX})")
-        if wind is not None and wind > WIND_MAX: breaches.append(f"Wind Speed Breach ({wind} > {WIND_MAX})")
         
         # Rain alert logic
         rain_alert_triggered = False
@@ -516,8 +507,6 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
                     {"metric": "Temperature", "value": f"{round(temp, 1)}°C" if temp is not None else "N/A", "limit": f"{T_MAX}°C", "status": "CRITICAL" if (temp is not None and temp > T_MAX) else "SAFE"},
                     {"metric": "Humidity", "value": f"{round(hum, 1)}%" if hum is not None else "N/A", "limit": f"{H_MAX}%", "status": "CRITICAL" if (hum is not None and (hum > H_MAX or hum < H_MIN)) else "SAFE"},
                     {"metric": "Gas Level", "value": f"{round(gas, 1)} ppm" if gas is not None else "N/A", "limit": f"{G_MAX} ppm", "status": "CRITICAL" if (gas is not None and gas > G_MAX) else "SAFE"},
-                    {"metric": "PM2.5", "value": f"{round(pm25, 1)} µg/m³" if pm25 is not None else "N/A", "limit": f"{PM25_MAX} µg/m³", "status": "CRITICAL" if (pm25 is not None and pm25 > PM25_MAX) else "SAFE"},
-                    {"metric": "Wind Speed", "value": f"{round(wind, 1)} km/h" if wind is not None else "N/A", "limit": f"{WIND_MAX} km/h", "status": "CRITICAL" if (wind is not None and wind > WIND_MAX) else "SAFE"},
                     {"metric": "Rain Sensor", "value": rain_status, "limit": "DRY", "status": rain_severity},
                 ]
 
@@ -600,7 +589,7 @@ def check_alerts(db: Session, device: models.Device, measurement: models.SensorD
                     ai_insight=full_insight,
                     historical_context=historical_context,
                     dashboard_link="http://localhost:5173/dashboard",
-                    title="🛡️ EcoSync Critical Alert"
+                    title="🛡️ Sreekar092004 S4 Alert"
                 )
                 
                 if success:
@@ -786,8 +775,8 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
                      "humidity_min": settings_obj.humidity_min,
                      "humidity_max": settings_obj.humidity_max,
                      "gas_threshold": settings_obj.gas_threshold,
-                     "pm25_threshold": getattr(settings_obj, 'pm25_threshold', 150.0), # handle db migration safely
-                     "wind_threshold": getattr(settings_obj, 'wind_threshold', 30.0)
+                     "pm25_threshold": settings_obj.pm25_threshold,
+                     "wind_threshold": settings_obj.wind_threshold
                 }
                 
         # 1b. Trust Score & Anomaly Detection
@@ -795,7 +784,8 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
             "temperature": filtered_temp,
             "humidity": filtered_hum,
             "gas": data.gas or mq_cleaned["smoothed"],
-            "wind_speed": data.wind_speed
+            "wind_speed": data.wind_speed,
+            "pm2_5": data.pm25
         }
         
         trust_score = trust_calculator.calculate_score(current_data)
@@ -1133,10 +1123,28 @@ async def get_filtered_iot_data(user_email: Optional[str] = None, db: Session = 
         if settings:
             temp = reading.temperature or 0.0
             gas = reading.gas or 0.0
+            hum = reading.humidity or 0.0
+            rain = reading.rain or 4095
+            
             if temp > (settings.temp_threshold or 45.0):
                 user_breaches.append(f"Temperature exceeds your limit ({temp}°C > {settings.temp_threshold}°C)")
-            if gas > (settings.gas_threshold or 2000.0):
+            if gas > (settings.gas_threshold or 600.0):
                 user_breaches.append(f"Gas level exceeds your limit ({gas} > {settings.gas_threshold})")
+            if hum > (settings.humidity_max or 80.0):
+                user_breaches.append(f"Humidity too high ({hum}% > {settings.humidity_max}%)")
+            if hum < (settings.humidity_min or 20.0):
+                user_breaches.append(f"Humidity too low ({hum}% < {settings.humidity_min}%)")
+            if rain < 1000 and settings.rain_alert:
+                user_breaches.append("Active Rain Detected (Alert Enabled)")
+            
+            # Use gas as proxy for PM2.5 in checks if pm25 sensor is missing
+            pm25_proxy = reading.gas or 0.0
+            if pm25_proxy > (settings.pm25_threshold or 150.0):
+                user_breaches.append(f"Air Quality (PM2.5) exceeds your limit ({pm25_proxy} > {settings.pm25_threshold})")
+            
+            wind_proxy = 0.0 # Mock or replace if wind sensor is added
+            if wind_proxy > (settings.wind_threshold or 30.0) and wind_proxy > 0:
+                user_breaches.append(f"Wind Speed exceeds your limit ({wind_proxy} > {settings.wind_threshold})")
     
     return {
         "status": "ok",
@@ -1299,39 +1307,61 @@ async def get_pro_data(lat: float = 17.3850, lon: float = 78.4867, city: str = N
 # --- Alert Settings API ---
 @app.get("/api/settings/alerts", response_model=schemas.AlertSettingsResponse, tags=["Settings"])
 def get_alert_settings(email: Optional[str] = None, db: Session = Depends(get_db)):
-    # Return user-specific setting or first active or default
-    settings = None
-    if email:
-        settings = db.query(models.AlertSettings).filter(models.AlertSettings.user_email == email).first()
+    """Returns user-specific settings or creates default if not found."""
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required to fetch settings")
+        
+    settings = db.query(models.AlertSettings).filter(models.AlertSettings.user_email == email).first()
     
     if not settings:
-        settings = db.query(models.AlertSettings).first()
-        
-    if not settings:
-        # Create absolute default if DB empty
-        settings = models.AlertSettings(user_email=email)
+        # Create absolute default if DB empty for this user
+        settings = models.AlertSettings(
+            user_email=email,
+            temp_threshold=45.0,
+            humidity_min=20.0,
+            humidity_max=80.0,
+            gas_threshold=600.0,
+            rain_alert=True,
+            pm25_threshold=150.0,
+            wind_threshold=30.0,
+            is_active=True
+        )
         db.add(settings)
         db.commit()
         db.refresh(settings)
+        
     return settings
 
 @app.post("/api/settings/alerts", response_model=schemas.AlertSettingsResponse, tags=["Settings"])
 def update_alert_settings(settings: schemas.AlertSettingsCreate, db: Session = Depends(get_db)):
-    # Update existing for this user or create new
-    db_settings = db.query(models.AlertSettings).filter(
-        models.AlertSettings.user_email == settings.user_email
-    ).first()
-    
-    if not db_settings:
-        db_settings = models.AlertSettings(**settings.dict())
-        db.add(db_settings)
-    else:
-        for key, value in settings.dict().items():
-            setattr(db_settings, key, value)
-    
-    db.commit()
-    db.refresh(db_settings)
-    return db_settings
+    """Update existing for this user or create new."""
+    logger.info(f"Settings update request for {settings.user_email}")
+    if not settings.user_email:
+        raise HTTPException(status_code=400, detail="User email is required")
+
+    try:
+        db_settings = db.query(models.AlertSettings).filter(
+            models.AlertSettings.user_email == settings.user_email
+        ).first()
+        
+        update_data = settings.dict(exclude_unset=True)
+        
+        if not db_settings:
+            logger.info(f"Creating new settings for {settings.user_email}")
+            db_settings = models.AlertSettings(**update_data)
+            db.add(db_settings)
+        else:
+            for key, value in update_data.items():
+                setattr(db_settings, key, value)
+        
+        db.commit()
+        # db.refresh(db_settings) # Optimized: Skip refresh to reduce roundtrip
+        logger.info(f"Settings successfully saved for {settings.user_email}")
+        return db_settings
+    except Exception as e:
+        logger.error(f"Failed to update settings for {settings.user_email}: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 @app.get("/api/alerts", tags=["IoT"])
 def get_historical_alerts(user_email: Optional[str] = None, limit: int = 50, db: Session = Depends(get_db)):
     """

@@ -101,10 +101,9 @@ class AlertSettingsCreate(BaseModel):
     humidity_min: float = 20.0
     humidity_max: float = 80.0
     gas_threshold: float = 600.0
+    rain_alert: bool = True
     pm25_threshold: float = 150.0
     wind_threshold: float = 30.0
-    rain_alert: bool = True
-    motion_alert: bool = True
     is_active: bool = True
 
 class AlertSettingsResponse(BaseModel):
@@ -114,10 +113,9 @@ class AlertSettingsResponse(BaseModel):
     humidity_min: float
     humidity_max: float
     gas_threshold: float
+    rain_alert: bool
     pm25_threshold: float
     wind_threshold: float
-    rain_alert: bool
-    motion_alert: bool
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

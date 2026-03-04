@@ -12,8 +12,8 @@ import { LocationProvider } from './contexts/LocationContext';
 // Lazy Load Pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const LiveMap = lazy(() => import('./pages/LiveMap'));
-
-const LandingPage = lazy(() => import('./pages/LandingPage')); // [NEW]
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const AlertPage = lazy(() => import('./pages/AlertPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
@@ -111,6 +111,14 @@ function AppContent() {
           <Suspense fallback={<PageLoader />}>
             <LoginPage />
           </Suspense>
+        } />
+
+        <Route path="/alerts" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <AlertPage />
+            </Suspense>
+          </ProtectedRoute>
         } />
 
 

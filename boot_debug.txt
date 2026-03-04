@@ -26,3 +26,27 @@
 [2026-03-03 23:23:39.498209] SQLALCHEMY_DATABASE_URL: postgresql://capstone_88_user:fMzaqkccbLxjcOVxJEkSYSjnuglLcWvL@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88
 [2026-03-03 23:23:39.560117] ENGINE DIALECT: postgresql
 [2026-03-03 23:23:39.560134] ENGINE URL: postgresql://capstone_88_user:***@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88
+[2026-03-03 23:48:07.458453] !!! DATABASE.PY INITIALIZING (PID: 27752) !!!
+[2026-03-03 23:48:07.529522] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 23:48:07.748007] ENGINE DIALECT: sqlite
+[2026-03-03 23:48:07.748038] ENGINE URL: sqlite:///./dev_database.db
+[2026-03-03 23:49:21.706346] !!! DATABASE.PY INITIALIZING (PID: 12224) !!!
+[2026-03-03 23:49:21.717594] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 23:49:21.744602] ENGINE DIALECT: sqlite
+[2026-03-03 23:49:21.744625] ENGINE URL: sqlite:///./dev_database.db
+[2026-03-03 23:55:17.282468] !!! DATABASE.PY INITIALIZING (PID: 26296) !!!
+[2026-03-03 23:55:17.293198] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 23:55:17.326791] ENGINE DIALECT: sqlite
+[2026-03-03 23:55:17.326814] ENGINE URL: sqlite:///./dev_database.db
+[2026-03-03 23:55:38.113566] !!! DATABASE.PY INITIALIZING (PID: 28376) !!!
+[2026-03-03 23:55:38.126462] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-03 23:55:38.158714] ENGINE DIALECT: sqlite
+[2026-03-03 23:55:38.158745] ENGINE URL: sqlite:///./dev_database.db
+[2026-03-04 00:03:16.492963] !!! DATABASE.PY INITIALIZING (PID: 20680) !!!
+[2026-03-04 00:03:16.503292] SQLALCHEMY_DATABASE_URL: sqlite:///./dev_database.db
+[2026-03-04 00:03:16.525291] ENGINE DIALECT: sqlite
+[2026-03-04 00:03:16.525312] ENGINE URL: sqlite:///./dev_database.db
+[2026-03-04 12:28:41.676695] !!! DATABASE.PY INITIALIZING (PID: 14688) !!!
+[2026-03-04 12:28:41.684120] SQLALCHEMY_DATABASE_URL: postgresql://capstone_88_user:fMzaqkccbLxjcOVxJEkSYSjnuglLcWvL@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88
+[2026-03-04 12:28:41.734178] ENGINE DIALECT: postgresql
+[2026-03-04 12:28:41.734192] ENGINE URL: postgresql://capstone_88_user:***@dpg-d6jb43buibrs73ahp9m0-a.oregon-postgres.render.com:5432/capstone_88

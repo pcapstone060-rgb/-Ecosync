@@ -3,8 +3,16 @@ import sys
 from sqlalchemy import create_engine, MetaData, Table, inspect
 from sqlalchemy.orm import sessionmaker
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 SOURCE_DB_URL = "sqlite:///dev_database.db"
-TARGET_DB_URL = "postgresql://capstone_88st_user:BBHknnCe3zprJfwFHvqC7QHrWer8vkmj@dpg-d6j5qccr85hc73fqfbhg-a.oregon-postgres.render.com/capstone_88st"
+TARGET_DB_URL = os.getenv("DATABASE_URL")
+
+if not TARGET_DB_URL:
+    print("Error: DATABASE_URL not found in .env")
+    sys.exit(1)
 
 def migrate():
     print(f"Connecting to Source SQLite DB...")

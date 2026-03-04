@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Brain } from 'lucide-react';
 import API_BASE_URL from '../config';
 
-const AIAnomalyDetectionCard = () => {
+const AIAnomalyDetectionCard = ({ dashboardAnomalyStatus }) => {
     const [metrics, setMetrics] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -27,8 +27,9 @@ const AIAnomalyDetectionCard = () => {
     }, []);
 
     const score = metrics?.anomaly_score || 0;
-    const status = metrics?.status || 'NORMAL';
-    const isAnomaly = status === 'ANOMALY';
+    // If dashboard sees an anomaly, prefer that; else use the metrics overall status
+    const isAnomaly = (dashboardAnomalyStatus && dashboardAnomalyStatus !== 'Normal') || (metrics?.status === 'ANOMALY');
+    const status = isAnomaly ? 'ANOMALY' : 'NORMAL';
 
     const getDataSourceConfig = (source) => {
         switch (source) {

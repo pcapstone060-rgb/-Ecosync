@@ -122,16 +122,21 @@ const LiteView = () => {
     const isLive = bleConnected || (connected && !isStale);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500 relative">
+            {/* Background Image Overlay */}
+            <div className="fixed inset-0 z-0 opacity-[0.05] pointer-events-none grayscale brightness-150" style={{ backgroundImage: 'url("/login_bg.png")', backgroundSize: 'cover', backgroundAttachment: 'fixed' }}></div>
             {/* Header / Connection Bar */}
             <div className="flex flex-wrap justify-between items-end gap-4">
-                <div>
-                    <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-300">
-                        CLOUD-BASED IOT ENVIRONMENTAL MONITORING <span className="text-slate-500 text-lg">|</span> LITE
-                    </h2>
-                    <p className="text-slate-400 text-xs font-mono mt-1">
-                        SOURCE: <span className="text-white font-bold">{bleConnected ? 'DIRECT BLUETOOTH (BLE)' : 'CLOUD RELAY (API)'}</span>
-                    </p>
+                <div className="flex items-center gap-4">
+                    <img src="/s4_logo.png" alt="S4 Logo" className="w-12 h-12 object-contain" />
+                    <div>
+                        <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-300">
+                            S4 LITE MONITORING
+                        </h2>
+                        <p className="text-slate-400 text-[10px] font-mono mt-1 uppercase tracking-widest">
+                            NODE: <span className="text-white font-bold">ECOSYNC-S4-NODE</span> | SOURCE: <span className="text-emerald-400 font-bold">{bleConnected ? 'BLE' : 'CLOUD'}</span>
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex gap-4">

@@ -116,22 +116,24 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                     setStream(prev => ({
                                         ...prev,
                                         connected: false,
+                                        isCloudSync: false,
                                         data: null,
                                         history: []
                                     }));
                                     return;
                                 }
 
-                                // STALENESS CHECK: If data is older than 5 minutes, treat as disconnected
+                                // STALENESS CHECK: If data is older than 30 seconds, treat as disconnected
                                 if (latest.timestamp) {
                                     const dataAge = Date.now() - new Date(latest.timestamp).getTime();
-                                    const FIVE_MINUTES = 5 * 60 * 1000;
-                                    if (dataAge > FIVE_MINUTES) {
-                                        console.log(`⚠️ Data is stale (${Math.round(dataAge / 60000)}min old) — hiding values until device reconnects`);
+                                    const STALE_THRESHOLD = 30 * 1000;
+                                    if (dataAge > STALE_THRESHOLD) {
+                                        console.log(`⚠️ Data is stale (${Math.round(dataAge / 1000)}s old) — hiding values until device reconnects`);
                                         bufferRef.current = [];
                                         setStream(prev => ({
                                             ...prev,
                                             connected: false,
+                                            isCloudSync: false,
                                             data: null,
                                             history: []
                                         }));
@@ -172,56 +174,21 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                                         anomaly_label: smart.anomaly_label,
                                         anomaly_score: smart.anomaly_score,
                                         trust_score: smart.trust_score,
-                                        risk_level: latest.risk_level || "SAFE",
-                                        prediction: latest.prediction,
-                                        sensor_health: latest.sensor_health,
+                                        risk_level: smart.risk_level || latest.risk_level || "SAFE",
+                                        prediction: latest.prediction || smart.prediction,
+                                        sensor_health: latest.sensor_health || smart.sensor_health,
                                         baseline: latest.baseline
                                     }
                                 };
 
-                                // --- CLOUD SYNC: POST to /iot/data (same as Pro mode) ---
-                                try {
-                                    const iotResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/iot/data`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            temperature: packet.temperature,
-                                            humidity: packet.humidity,
-                                            pm25: packet.pm25 ?? 0,
-                                            mq_raw: packet.mq_raw ?? 0,
-                                            wind_speed: packet.wind_speed ?? 0,
-                                            rain: packet.rain ?? null,
-                                            motion: packet.motion ?? null,
-                                            user_email: userEmail,
-                                            lat: coordinates ? coordinates[0] : null,
-                                            lon: coordinates ? coordinates[1] : null
-                                        })
-                                    });
-
-                                    if (iotResponse.ok) {
-                                        const smartData = await iotResponse.json();
-                                        // Merge AI smart metrics from backend response
-                                        packet.trustScore = smartData.trust_score ?? packet.trustScore;
-                                        packet.smart_metrics = {
-                                            insight: smartData.smart_insight || packet.smart_metrics.insight,
-                                            anomaly_label: smartData.anomaly_label || packet.smart_metrics.anomaly_label || "Normal",
-                                            anomaly_score: smartData.anomaly_score ?? packet.smart_metrics.anomaly_score,
-                                            trust_score: smartData.trust_score ?? packet.smart_metrics.trust_score,
-                                            risk_level: smartData.risk_level || packet.smart_metrics.risk_level || "SAFE",
-                                            prediction: smartData.prediction || packet.smart_metrics.prediction,
-                                            sensor_health: smartData.sensor_health || packet.smart_metrics.sensor_health,
-                                            baseline: smartData.baseline || packet.smart_metrics.baseline,
-                                            user_breaches: smartData.user_breaches || []
-                                        };
-                                    }
-                                } catch (iotErr) {
-                                    console.warn("Lite Cloud Sync Error:", iotErr);
-                                }
+                                // Cloud Sync POST removed to prevent infinite feedback loop of stale data
+                                // Smart metrics are already provided natively via /api/filtered/latest
 
                                 // Update Stream State
                                 bufferRef.current = [...bufferRef.current, packet].slice(-50);
                                 setStream({
-                                    connected: false,
+                                    connected: true, // Data is fresh, so we're "connected" to the node via cloud
+                                    isCloudSync: true,
                                     lastSeen: now,
                                     data: packet,
                                     history: bufferRef.current,
@@ -261,7 +228,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
             await portRef.current.close();
             portRef.current = null;
         }
-        setStream(prev => ({ ...prev, connected: false }));
+        setStream(prev => ({ ...prev, connected: false, isCloudSync: false }));
         setHealth({ status: 'DISCONNECTED', lastPacketTime: null });
     };
 
@@ -411,6 +378,7 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                         setStream(prev => ({
                             ...prev,
                             connected: true,
+                            isCloudSync: false,
                             lastSeen: Date.now(),
                             data: packet,
                             history: bufferRef.current
