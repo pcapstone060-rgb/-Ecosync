@@ -20,6 +20,7 @@ build
 backend/dev_database.db
 backend/ecosync.db
 *.log
+!backend/requirements.txt
 *.txt
 .pio
 .vscode

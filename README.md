@@ -1,3 +1,13 @@
+---
+title: Cloud-IoT Env Monitoring
+emoji: 🌍
+colorFrom: green
+colorTo: blue
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 <div align="center">
   <img src="https://img.shields.io/badge/EcoSync-Pro-emerald?style=for-the-badge&logo=leaf" alt="EcoSync Logo" />
   
