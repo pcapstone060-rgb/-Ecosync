@@ -19,8 +19,8 @@ build
 # Project specific
 backend/dev_database.db
 backend/ecosync.db
+backend/venv
+backend/__pycache__
 *.log
-!backend/requirements.txt
-*.txt
 .pio
 .vscode
