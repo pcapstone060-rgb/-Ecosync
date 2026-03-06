@@ -13,10 +13,6 @@ services:
         fromDatabase:
           name: ecosync-db
           property: connectionString
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_KEY
-        sync: false
       - key: GOOGLE_API_KEY
         sync: false
 
