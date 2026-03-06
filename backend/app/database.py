@@ -19,23 +19,11 @@ SQLALCHEMY_DATABASE_URL = os.getenv("RENDER_DB_URL", os.getenv("DATABASE_URL", "
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-if "postgresql" in SQLALCHEMY_DATABASE_URL and "sslmode" not in SQLALCHEMY_DATABASE_URL:
-    separator = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
-    SQLALCHEMY_DATABASE_URL += f"{separator}sslmode=require"
-
-# Emergency fallback: If the stale CockroachDB URL is still present in Render's dashboard,
-# it will cause a crash loop due to missing SSL certs. Fall back to SQLite temporarily so
-# the backend can at least start and serve the frontend until Render Sync completes.
-if "cockroachlabs" in SQLALCHEMY_DATABASE_URL:
-    print("WARNING: Stale CockroachDB URL detected. Falling back to SQLite to prevent backend crash loop.")
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./dev_database.db"
-
-# Use slightly different args depending on if it's sqlite or postgres
-is_postgres = SQLALCHEMY_DATABASE_URL.startswith("postgresql") or SQLALCHEMY_DATABASE_URL.startswith("postgres")
+is_postgres = "postgresql" in SQLALCHEMY_DATABASE_URL
 
 # Print sanitized URL for easier Render debugging
 sanitized_url = SQLALCHEMY_DATABASE_URL.split("@")[-1] if "@" in SQLALCHEMY_DATABASE_URL else SQLALCHEMY_DATABASE_URL
-print(f"DATABASE CONNECT START: Using target {sanitized_url}")
+print(f"DATABASE CONNECT START: Target host is {sanitized_url}")
 
 connect_args = {}
 if not is_postgres:
@@ -50,11 +38,22 @@ if is_postgres:
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args=connect_args,
-    **engine_kwargs
-)
+try:
+    print(f"Attempting to create engine for {is_postgres and 'PostgreSQL' or 'SQLite'}...")
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args=connect_args,
+        **engine_kwargs
+    )
+    # Test connection immediately
+    with engine.connect() as conn:
+        print("DATABASE CONNECTION: SUCCESS")
+except Exception as e:
+    print(f"DATABASE CONNECTION: FAILED with error: {str(e)}")
+    print("EMERGENCY FALLBACK: Switching to local SQLite to keep server alive.")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./emergency.db"
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
