@@ -15,6 +15,14 @@ load_dotenv()
 # First attempt to get the RENDER_DB_URL (if blueprint synced), then DATABASE_URL
 SQLALCHEMY_DATABASE_URL = os.getenv("RENDER_DB_URL", os.getenv("DATABASE_URL", "sqlite:///./dev_database.db"))
 
+# Sanitize the URL for SQLAlchemy 2.0 and Render SSL requirements
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if "postgresql" in SQLALCHEMY_DATABASE_URL and "sslmode" not in SQLALCHEMY_DATABASE_URL:
+    separator = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
+    SQLALCHEMY_DATABASE_URL += f"{separator}sslmode=require"
+
 # Emergency fallback: If the stale CockroachDB URL is still present in Render's dashboard,
 # it will cause a crash loop due to missing SSL certs. Fall back to SQLite temporarily so
 # the backend can at least start and serve the frontend until Render Sync completes.
