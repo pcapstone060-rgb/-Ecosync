@@ -9,24 +9,31 @@ with open("boot_debug.txt", "a") as f:
 
 from dotenv import load_dotenv
 
+# Production-ready Database Configuration
 load_dotenv()
 
 # First attempt to get the DATABASE_URL from .env
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev_database.db")
 
-with open("boot_debug.txt", "a") as f:
-    f.write(f"[{datetime.now()}] SQLALCHEMY_DATABASE_URL: {SQLALCHEMY_DATABASE_URL}\n")
-
 # Use slightly different args depending on if it's sqlite or postgres
-connect_args = {"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+# Note: CockroachDB uses the postgresql protocol
+is_postgres = SQLALCHEMY_DATABASE_URL.startswith("postgresql") or SQLALCHEMY_DATABASE_URL.startswith("postgres")
+
+connect_args = {}
+if not is_postgres:
+    connect_args["check_same_thread"] = False
+
+# Create the engine with pooled connections for production reliability
+engine_kwargs = {"pool_pre_ping": True}
+if is_postgres:
+    engine_kwargs["pool_size"] = 5
+    engine_kwargs["max_overflow"] = 10
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args=connect_args
+    SQLALCHEMY_DATABASE_URL,
+    connect_args=connect_args,
+    **engine_kwargs
 )
-
-with open("boot_debug.txt", "a") as f:
-    f.write(f"[{datetime.now()}] ENGINE DIALECT: {engine.name}\n")
-    f.write(f"[{datetime.now()}] ENGINE URL: {engine.url}\n")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
