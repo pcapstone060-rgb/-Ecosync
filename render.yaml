@@ -13,6 +13,10 @@ services:
         fromDatabase:
           name: ecosync-db
           property: connectionString
+      - key: RENDER_DB_URL
+        fromDatabase:
+          name: ecosync-db
+          property: connectionString
       - key: GOOGLE_API_KEY
         sync: false
 

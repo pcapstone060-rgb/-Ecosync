@@ -12,11 +12,18 @@ from dotenv import load_dotenv
 # Production-ready Database Configuration
 load_dotenv()
 
-# First attempt to get the DATABASE_URL from .env
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev_database.db")
+# First attempt to get the RENDER_DB_URL (if blueprint synced), then DATABASE_URL
+SQLALCHEMY_DATABASE_URL = os.getenv("RENDER_DB_URL", os.getenv("DATABASE_URL", "sqlite:///./dev_database.db"))
+
+# Emergency fallback: If the stale CockroachDB URL is still present in Render's dashboard,
+# it will cause a crash loop due to missing SSL certs. Fall back to SQLite temporarily so
+# the backend can at least start and serve the frontend until Render Sync completes.
+if "cockroachlabs" in SQLALCHEMY_DATABASE_URL:
+    print("WARNING: Stale CockroachDB URL detected. Falling back to SQLite to prevent backend crash loop.")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./dev_database.db"
 
 # Use slightly different args depending on if it's sqlite or postgres
-# Note: CockroachDB uses the postgresql protocol
+# Note: CockroachDB uses the postgresql protocol (but we filter it out above)
 is_postgres = SQLALCHEMY_DATABASE_URL.startswith("postgresql") or SQLALCHEMY_DATABASE_URL.startswith("postgres")
 
 connect_args = {}
