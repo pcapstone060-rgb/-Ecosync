@@ -1,4 +1,4 @@
-from . import schemas, database
+from . import schemas, database, models
 from .core import security
 from sqlalchemy.orm import Session
 
@@ -9,7 +9,7 @@ def create_admin_user():
         password = "Admin123@#$"  # Matches documentation (Capital A)
 
         # Check if exists
-        existing = db.query(database.User).filter(database.User.email == email).first()
+        existing = db.query(models.User).filter(models.User.email == email).first()
         if existing:
             # Update password if exists (ensures it matches docs even if DB persisted)
             existing.hashed_password = security.get_password_hash(password)
@@ -18,7 +18,7 @@ def create_admin_user():
         else:
             print(f"Creating new Admin user: {email}")
             hashed_pw = security.get_password_hash(password)
-            new_user = database.User(
+            new_user = models.User(
                 email=email,
                 hashed_password=hashed_pw
             )
