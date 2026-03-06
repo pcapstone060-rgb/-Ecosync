@@ -31,12 +31,18 @@ if "cockroachlabs" in SQLALCHEMY_DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = "sqlite:///./dev_database.db"
 
 # Use slightly different args depending on if it's sqlite or postgres
-# Note: CockroachDB uses the postgresql protocol (but we filter it out above)
 is_postgres = SQLALCHEMY_DATABASE_URL.startswith("postgresql") or SQLALCHEMY_DATABASE_URL.startswith("postgres")
+
+# Print sanitized URL for easier Render debugging
+sanitized_url = SQLALCHEMY_DATABASE_URL.split("@")[-1] if "@" in SQLALCHEMY_DATABASE_URL else SQLALCHEMY_DATABASE_URL
+print(f"DATABASE CONNECT START: Using target {sanitized_url}")
 
 connect_args = {}
 if not is_postgres:
     connect_args["check_same_thread"] = False
+else:
+    # Explicitly enforce SSL mode for Render production
+    connect_args["sslmode"] = "require"
 
 # Create the engine with pooled connections for production reliability
 engine_kwargs = {"pool_pre_ping": True}
