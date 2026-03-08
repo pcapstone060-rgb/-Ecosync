@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import LightDashboard from './LightDashboard';
 import API_BASE_URL from '../config';
-import LocationTestButton from '../components/LocationTestButton';
+
 import LocationPermissionPrompt from '../components/LocationPermissionPrompt';
 import NotificationPermissionPrompt from '../components/NotificationPermissionPrompt';
 import pushNotificationManager from '../utils/pushNotifications';
@@ -113,7 +113,7 @@ const Dashboard = ({ initialView }) => {
             <LightDashboard initialView={initialView} />
 
             {/* Manual Location Test Button */}
-            <LocationTestButton userEmail={currentUser?.email} />
+
         </>
     );
 };
