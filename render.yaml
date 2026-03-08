@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: ecosync-backend
+    env: docker
+    region: singapore
+    plan: free
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecosync-db
+          property: internalConnectionString
+      - key: RENDER_DB_URL
+        fromDatabase:
+          name: ecosync-db
+          property: internalConnectionString
+      - key: GOOGLE_API_KEY
+        sync: false
+
+databases:
+  - name: ecosync-db
+    region: singapore
+    plan: free
