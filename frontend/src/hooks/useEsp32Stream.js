@@ -279,9 +279,9 @@ export const useEsp32Stream = (mode = 'light', coordinates = [17.3850, 78.4867],
                         // 1. RAW EXTRACTION
                         const tRaw = json.temperature !== undefined ? json.temperature : (json.temp !== undefined ? json.temp : null);
                         const hRaw = json.humidity !== undefined ? json.humidity : (json.hum !== undefined ? json.hum : null);
-                        const gasRaw = json.gas !== undefined ? json.gas : (json.mq_raw !== undefined ? json.mq_raw : 0);
-                        const motionRaw = json.motion !== undefined ? json.motion : 0;
-                        const rainRaw = json.rain !== undefined ? json.rain : 0;
+                        const gasRaw = json.mq_raw !== undefined ? json.mq_raw : (json.gas !== undefined ? json.gas : (json.mq_value !== undefined ? json.mq_value : 0));
+                        const motionRaw = json.motion !== undefined ? json.motion : (json.motion_detected !== undefined ? (json.motion_detected ? 1 : 0) : 0);
+                        const rainRaw = json.rain !== undefined ? json.rain : (json.rain_value !== undefined ? json.rain_value : 0);
                         const pm25Raw = json.pm25 !== undefined ? json.pm25 : (json.pm2_5 !== undefined ? json.pm2_5 : 0);
                         const screenMode = json.screen !== undefined ? json.screen : 0;
 

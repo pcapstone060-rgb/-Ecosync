@@ -748,6 +748,10 @@ class IoTSensorData(BaseModel):
     lat: Optional[float] = None
     lon: Optional[float] = None
     ph: float = 7.0
+    # Backward compatibility
+    mq_value: Optional[float] = None
+    rain_value: Optional[float] = None
+    motion_detected: Optional[bool] = None
 
 
 
@@ -768,6 +772,11 @@ async def receive_iot_data(data: IoTSensorData, db: Session = Depends(get_db)):
             data.gas = (data.gas or 400.0) + random.uniform(1500.0, 3000.0)
             data.mq_raw = data.mq_raw + random.uniform(500.0, 1000.0)
         
+        # 0. Compatibility Handle
+        if data.mq_value is not None and data.mq_raw == 0.0: data.mq_raw = data.mq_value
+        if data.rain_value is not None and data.rain == 0.0: data.rain = data.rain_value
+        if data.motion_detected is not None and data.motion == 0: data.motion = 1 if data.motion_detected else 0
+
         # 1. Kalman Filtering & Cleaning
         temp_val = data.temperature if data.temperature is not None else 0.0
         hum_val = data.humidity if data.humidity is not None else 0.0

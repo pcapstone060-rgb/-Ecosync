@@ -322,12 +322,13 @@ void loop() {
       JsonDocument doc;
       doc["temperature"] = temp_kalman;
       doc["humidity"] = hum_kalman;
-      doc["mq_value"] = mqValue;
-      doc["rain_value"] = rainValue;
+      doc["mq_raw"] = mqValue;
+      doc["rain"] = rainValue;
       // CALIBRATED: Active High Motion (Idle=0)
-      doc["motion_detected"] = (pirValue == HIGH);
+      doc["motion"] = (pirValue == HIGH) ? 1 : 0;
       doc["ir_detected"] = (irValue == LOW);
       doc["pm25"] = pm25_kalman;
+      doc["user_email"] = "sreekar092004@gmail.com"; 
       // doc["pressure"] = 1013; // Hardcoded standard sea-level pressure
       String jsonPayload;
       serializeJson(doc, jsonPayload);
