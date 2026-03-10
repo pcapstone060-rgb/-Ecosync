@@ -31,7 +31,19 @@ const ComplianceLog = () => {
     const fetchLogs = async () => {
         setError(null);
         try {
+            if (!API_BASE_URL) {
+                console.warn("VITE_API_BASE_URL is not defined. Checks will fail in production.");
+            }
             const res = await fetch(`${API_BASE_URL}/api/compliance/logs`);
+            
+            // Validate Content-Type before parsing JSON
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await res.text();
+                console.error("Expected JSON but received non-JSON response:", text.substring(0, 100));
+                throw new Error("API configuration error: received HTML instead of JSON. Ensure VITE_API_BASE_URL is set correctly.");
+            }
+
             if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
             const data = await res.json();
@@ -59,6 +71,13 @@ const ComplianceLog = () => {
         setError(null);
         try {
             const res = await fetch(`${API_BASE_URL}/api/compliance/logs?history=true`);
+            
+            // Validate Content-Type before parsing JSON
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("API configuration error: received HTML instead of JSON.");
+            }
+
             if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
             const data = await res.json();
