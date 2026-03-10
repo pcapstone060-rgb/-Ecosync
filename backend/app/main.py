@@ -181,25 +181,6 @@ app.include_router(push_notifications.router, tags=["Push Notifications"])
 app.include_router(devices.router, tags=["Devices"])
 app.include_router(ml_api.router)
 
-# --- Static File Serving (Frontend) ---
-FRONTEND_DIST_DIR = os.getenv("FRONTEND_DIST_DIR", "../frontend/dist")
-
-if os.path.exists(FRONTEND_DIST_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST_DIR, "assets")), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        # API routes are already handled by routers
-        # Check if the requested file exists in dist
-        file_path = os.path.join(FRONTEND_DIST_DIR, full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
-        # Otherwise serve index.html for SPA routing
-        return FileResponse(os.path.join(FRONTEND_DIST_DIR, "index.html"))
-else:
-    logger.warning(f"Frontend dist directory not found at {FRONTEND_DIST_DIR}. Frontend will not be served.")
-
-
 # --- Helper Functions ---
 def get_connector(device: models.Device):
     config = {"lat": device.lat, "lon": device.lon}
@@ -1398,3 +1379,19 @@ def get_historical_alerts(user_email: Optional[str] = None, limit: int = 50, db:
 async def get_realtime_map_data():
     markers = get_cached_markers()
     return {"count": len(markers), "markers": markers, "cache_status": "active"}
+
+# --- Static File Serving (Frontend) ---
+# MUST BE AT THE END TO PREVENT INTERCEPTING API ROUTES
+FRONTEND_DIST_DIR = os.getenv("FRONTEND_DIST_DIR", "../frontend/dist")
+
+if os.path.exists(FRONTEND_DIST_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST_DIR, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        file_path = os.path.join(FRONTEND_DIST_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(FRONTEND_DIST_DIR, "index.html"))
+else:
+    logger.warning(f"Frontend dist directory not found at {FRONTEND_DIST_DIR}. Frontend will not be served.")
