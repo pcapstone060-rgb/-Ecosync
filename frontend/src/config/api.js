@@ -1,6 +1,8 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined ? import.meta.env.VITE_API_BASE_URL : '';
+const ENV_API_URL = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = (ENV_API_URL && ENV_API_URL.trim() !== "") ? ENV_API_URL : 'https://ecosync-backend-6lh7.onrender.com';
 
-export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL !== undefined ? import.meta.env.VITE_WS_BASE_URL : '';
+const ENV_WS_URL = import.meta.env.VITE_WS_BASE_URL;
+export const WS_BASE_URL = (ENV_WS_URL && ENV_WS_URL.trim() !== "") ? ENV_WS_URL : 'wss://ecosync-backend-6lh7.onrender.com';
 
 // Helper to build API URLs
 export const buildApiUrl = (path) => {
