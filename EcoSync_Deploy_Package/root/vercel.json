@@ -1,0 +1,10 @@
+{
+    "version": 2,
+    "name": "ecosync-frontend",
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

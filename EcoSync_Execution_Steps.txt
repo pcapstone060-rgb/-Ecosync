@@ -1,0 +1,84 @@
+============================================================
+           🌿 ECOSYNC PRO: PROJECT EXECUTION STEPS
+============================================================
+
+------------------------------------------------------------
+1. BACKEND EXECUTION (FastAPI + PostgreSQL)
+------------------------------------------------------------
+Prerequisites: Python 3.9+, PostgreSQL installed.
+
+Step 1: Open Terminal and navigate to the backend folder:
+   cd backend
+
+Step 2: Create a Virtual Environment:
+   python -m venv venv
+
+Step 3: Activate the Virtual Environment:
+   Windows: venv\Scripts\activate
+   Mac/Linux: source venv/bin/activate
+
+Step 4: Install required Python packages:
+   pip install -r requirements.txt
+
+Step 5: Configure your Environment (.env):
+   Create a file named '.env' from '.env.template' and add your 
+   DATABASE_URL, SECRET_KEY, EMAIL_USER, and EMAIL_PASS.
+
+Step 6: Start the Backend Server:
+   python start.py
+   (Default API URL: http://localhost:8000)
+
+------------------------------------------------------------
+2. FRONTEND EXECUTION (React + Vite)
+------------------------------------------------------------
+Prerequisites: Node.js 18+ and npm installed.
+
+Step 1: Open a new Terminal and navigate to the frontend folder:
+   cd frontend
+
+Step 2: Install Node.js packages:
+   npm install
+
+Step 3: Verify Environment Configuration:
+   Ensure '.env' has: VITE_API_URL=http://localhost:8000
+
+Step 4: Start the Development Server:
+   npm run dev
+   (Access Dashboard at: http://localhost:5173)
+
+------------------------------------------------------------
+3. HARDWARE SETUP & FLASHING (ESP32)
+------------------------------------------------------------
+Prerequisites: VS Code with PlatformIO extension.
+
+Step 1: Connect your ESP32 board via USB.
+
+Step 2: Open the 'hardware' folder in VS Code.
+
+Step 3: Update WiFi and Server credentials in:
+   hardware/config.h
+
+Step 4: Compile and Upload the firmware:
+   Click the 'Upload' arrow in the PlatformIO status bar.
+
+Step 5: Monitor Output:
+   Open the Serial Monitor (Baud Rate: 115200).
+
+------------------------------------------------------------
+4. CLOUD DEPLOYMENT (Vercel & Render)
+------------------------------------------------------------
+- Backend: Host on Render using Docker (Context: backend).
+- Frontend: Host on Vercel by importing the 'frontend' folder.
+- Database: Use a managed PostgreSQL instance (e.g., Neon).
+
+------------------------------------------------------------
+5. SUPPORTING SCRIPTS
+------------------------------------------------------------
+- upload.sh        : Quick upload for Linux/Mac users.
+- start_local.bat  : Automatic startup for Windows users.
+- seed_db.py       : Inject test data into your database.
+- verify_api.py    : Check if the API endpoints are active.
+
+============================================================
+   EcoSync Pro Intelligence Engine • Project Submission 2026
+============================================================
