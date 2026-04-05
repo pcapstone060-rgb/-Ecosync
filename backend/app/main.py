@@ -125,6 +125,8 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
     "https://ecosync-six.vercel.app",
 ]
 # Render / Vercel / custom frontends: set CORS_EXTRA_ORIGINS=https://a.com,https://b.com in the service Environment
