@@ -14,8 +14,9 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements from backend directory
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+# Install Python dependencies (suppress root-user pip warning in Docker; running as root is normal here)
+ENV PIP_ROOT_USER_ACTION=ignore
+RUN pip install --no-cache-dir --root-user-action=ignore -r requirements.txt gunicorn
 
 # Copy backend application code to root of container
 COPY . .

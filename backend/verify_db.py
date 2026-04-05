@@ -15,10 +15,12 @@ engine = create_engine(DATABASE_URL)
 
 try:
     with engine.connect() as conn:
-        print("Connection successful.")
-        
-        tables = ['users', 'devices', 'sensor_data', 'ml_logs', 'alerts']
-        for t in tables:
+        conn.execute(text("SELECT 1"))
+    print("Connection successful.")
+
+    tables = ["users", "devices", "sensor_data", "ml_logs", "alerts", "alert_settings", "safety_logs"]
+    for t in tables:
+        with engine.connect() as conn:
             try:
                 res = conn.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar()
                 print(f"Table '{t}' exists, rows: {res}")

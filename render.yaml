@@ -1,3 +1,5 @@
+# Postgres URL is injected from the ecosync-db resource (same Render account/region).
+# Use property "connectionString" (Render no longer accepts internalConnectionString).
 services:
   - type: web
     name: ecosync-backend
@@ -12,11 +14,11 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: ecosync-db
-          property: internalConnectionString
+          property: connectionString
       - key: RENDER_DB_URL
         fromDatabase:
           name: ecosync-db
-          property: internalConnectionString
+          property: connectionString
       - key: GOOGLE_API_KEY
         sync: false
 

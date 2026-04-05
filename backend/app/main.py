@@ -126,6 +126,10 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "https://ecosync-six.vercel.app",
 ]
+# Render / Vercel / custom frontends: set CORS_EXTRA_ORIGINS=https://a.com,https://b.com in the service Environment
+_cors_extra = os.getenv("CORS_EXTRA_ORIGINS", "").strip()
+if _cors_extra:
+    ALLOWED_ORIGINS.extend([o.strip() for o in _cors_extra.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
