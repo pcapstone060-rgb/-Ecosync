@@ -102,11 +102,12 @@ async def startup_event():
         # asyncio.create_task(refresh_map_cache())
         
         # 4. Train anomaly detection model
-        logger.info("Training Isolation Forest on historical data...")
+        logger.info("Training Isolation Forest on historical data (with synthetic fallback)...")
         from .ml_engine import load_historical_data, if_detector
-        historical_data = load_historical_data(limit=1000)
+        historical_data = load_historical_data(limit=1000, use_synthetic_fallback=True)
         if historical_data:
             if_detector.train(historical_data)
+            logger.info(f"Isolation Forest trained successfully on {len(historical_data)} samples.")
         else:
             logger.warning("No historical data found to train Isolation Forest.")
 

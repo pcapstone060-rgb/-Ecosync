@@ -351,7 +351,29 @@ class IsolationForestAnomalyDetector:
             log_ml_activity(f"Prediction error: {e}")
             return "NORMAL", 0.0
 
-def load_historical_data(limit: int = 1000) -> List[Dict]:
+def _generate_synthetic_data(count: int = 200) -> List[Dict]:
+    """
+    Generates realistic 'normal' sensor data for initial model training.
+    Prevents the Isolation Forest from being untrained on a cold start.
+    """
+    import random
+    from datetime import datetime, timedelta
+    
+    synthetic_data = []
+    base_time = datetime.utcnow()
+    
+    for i in range(count):
+        synthetic_data.append({
+            "temperature": round(random.uniform(22.0, 28.0), 2),
+            "humidity": round(random.uniform(45.0, 55.0), 2),
+            "gas": round(random.uniform(150.0, 250.0), 2),
+            "timestamp": base_time - timedelta(minutes=i * 5)
+        })
+    
+    log_ml_activity(f"Generated {count} synthetic samples for baseline training.")
+    return synthetic_data
+
+def load_historical_data(limit: int = 1000, use_synthetic_fallback: bool = False) -> List[Dict]:
     """
     Helper function to load historical sensor data from PostgreSQL/SQLite 
     via SQLAlchemy for model training.
@@ -367,6 +389,9 @@ def load_historical_data(limit: int = 1000) -> List[Dict]:
             SensorData.humidity.isnot(None)
         ).order_by(SensorData.timestamp.desc()).limit(limit).all()
         
+        if not records and use_synthetic_fallback:
+            return _generate_synthetic_data(count=200)
+
         return [
             {
                 "temperature": r.temperature,
@@ -377,6 +402,8 @@ def load_historical_data(limit: int = 1000) -> List[Dict]:
         ]
     except Exception as e:
         log_ml_activity(f"DB Load error: {e}")
+        if use_synthetic_fallback:
+            return _generate_synthetic_data(count=200)
         return []
     finally:
         db.close()
